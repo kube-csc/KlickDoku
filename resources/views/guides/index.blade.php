@@ -58,7 +58,7 @@
                                     </span>
                                 @endif
                                 <h3 class="text-lg font-semibold text-gray-900 mb-2">
-                                    <a href="{{ route('guides.show', ['locale' => $locale, 'guide' => $guide->slug]) }}" class="hover:text-blue-600">
+                                    <a href="{{ route('guides.show', ['locale' => $locale, 'slug' => $guide->slug]) }}" class="hover:text-blue-600">
                                         {{ $guideTitle }}
                                     </a>
                                 </h3>

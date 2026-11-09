@@ -81,7 +81,7 @@
              style="position: relative; min-height: 400px;">
             @if($currentStep && $currentStep->screenshot_path)
                 <img id="screenshot-image"
-                     src="{{ asset($currentStep->screenshot_path) }}"
+                     src="{{ asset('storage/' . $currentStep->screenshot_path) }}"
                      alt="{{ $currentStep->title }}"
                      loading="lazy"
                      class="w-full h-auto"
@@ -280,27 +280,7 @@
 <script>
     const tutorialId = {{ $tutorial->id }};
     const locale = '{{ $locale }}';
-    const steps = @json($tutorial->steps->map(function($step) use ($locale) {
-        return [
-            'id' => $step->id,
-            'step_number' => $step->step_number,
-            'title' => $step->getTranslationAttribute('title', $locale) ?? $step->title,
-            'instruction' => $step->getTranslationAttribute('instruction', $locale) ?? $step->instruction,
-            'tip' => $step->getTranslationAttribute('tip', $locale) ?? $step->tip,
-            'warning' => $step->getTranslationAttribute('warning', $locale) ?? $step->warning,
-            'screenshot_path' => $step->screenshot_path,
-            'hotspots' => $step->hotspots->map(function($h) {
-                return [
-                    'id' => $h->id,
-                    'position_x' => $h->position_x,
-                    'position_y' => $h->position_y,
-                    'radius' => $h->radius ?? 30,
-                    'label' => $h->label,
-                    'is_clickable' => $h->is_clickable,
-                ];
-            })
-        ];
-    })->values()->all());
+    const steps = {!! json_encode($stepsData) !!};
 
     let currentStepIndex = {{ $currentStepNumber - 1 }};
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -340,7 +320,7 @@
                 if (placeholder) placeholder.remove();
                 container.insertBefore(imgEl, container.firstChild);
             }
-            imgEl.src = '{{ asset("") }}/' + step.screenshot_path;
+            imgEl.src = '{{ asset("storage") }}/' + step.screenshot_path;
             imgEl.style.display = 'block';
         } else {
             const imgEl = document.getElementById('screenshot-image');

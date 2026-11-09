@@ -79,7 +79,7 @@
 
         <!-- PDF Export Button -->
         <div class="mt-6 pt-4 border-t">
-            <a href="{{ route('guides.pdf', ['locale' => $locale, 'guide' => $guide->slug]) }}" 
+            <a href="{{ route('guides.pdf', ['locale' => $locale, 'slug' => $guide->slug]) }}"
                class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -174,7 +174,7 @@
             <!-- Kommentar schreiben -->
             <div class="mb-8 p-4 bg-gray-50 rounded-lg">
                 <h3 class="font-semibold text-gray-700 mb-3">{{ __('common.write_comment') }}</h3>
-                <form action="{{ route('guides.comments.store', $guide->slug) }}" method="POST">
+                <form action="{{ route('guides.comments.store', ['locale' => $locale, 'guide' => $guide->slug]) }}" method="POST">
                     @csrf
                     <textarea name="body" rows="3" placeholder="{{ __('common.write_comment') }}"
                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"></textarea>
@@ -241,7 +241,7 @@
                                 @endif
 
                                 @auth
-                                    <form action="{{ route('guides.comments.store', $guide->slug) }}" method="POST" class="mt-3 flex gap-2">
+                                    <form action="{{ route('guides.comments.store', ['locale' => $locale, 'guide' => $guide->slug]) }}" method="POST" class="mt-3 flex gap-2">
                                         @csrf
                                         <input type="hidden" name="parent_id" value="{{ $comment->id }}">
                                         <input type="text" name="body" placeholder="Antworten..."
@@ -263,7 +263,7 @@
 
     <!-- Zurück zu Anleitungen -->
     <div class="mb-8">
-        <a href="{{ route('guides.index') }}" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium">
+        <a href="{{ route('guides.index', ['locale' => $locale]) }}" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
             </svg>

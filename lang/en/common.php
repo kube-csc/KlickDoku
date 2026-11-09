@@ -70,4 +70,11 @@ return [
     'hotspots' => 'Hotspots',
     'tutorial_completed' => 'Tutorial completed! 🎉',
     'complete_tutorial' => 'Complete tutorial',
+    'explore_guides' => 'Explore guides',
+    'explore_guides_description' => 'Step-by-step guides with screenshots for all features.',
+    'explore_tutorials' => 'Watch tutorials',
+    'explore_tutorials_description' => 'Interactive tutorials to try out the features.',
+    'explore_project' => 'Understand the project',
+    'explore_project_description' => 'Learn more about the association management project.',
+    'no_login_required' => 'No login required — just get started!',
 ];

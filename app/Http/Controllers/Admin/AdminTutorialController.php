@@ -43,7 +43,7 @@ class AdminTutorialController extends Controller
             'og_image' => 'nullable|string|max:255',
             'steps' => 'nullable|array',
             'steps.*.title' => 'required_with:steps|string|max:255',
-            'steps.*.content' => 'required_with:steps|string',
+            'steps.*.instruction' => 'required_with:steps|string',
             'steps.*.hotspots' => 'nullable|array',
             'steps.*.hotspots.*.selector' => 'required_with:steps.*.hotspots|string',
             'steps.*.hotspots.*.label' => 'required_with:steps.*.hotspots|string',
@@ -73,7 +73,7 @@ class AdminTutorialController extends Controller
                     'tutorial_id' => $tutorial->id,
                     'step_number' => $index + 1,
                     'title' => $step['title'],
-                    'content' => $step['content'],
+                    'instruction' => $step['instruction'],
                 ]);
 
                 // Hotspots erstellen
@@ -117,7 +117,7 @@ class AdminTutorialController extends Controller
             'og_image' => 'nullable|string|max:255',
             'steps' => 'nullable|array',
             'steps.*.title' => 'required_with:steps|string|max:255',
-            'steps.*.content' => 'required_with:steps|string',
+            'steps.*.instruction' => 'required_with:steps|string',
             'steps.*.hotspots' => 'nullable|array',
             'steps.*.hotspots.*.selector' => 'required_with:steps.*.hotspots|string',
             'steps.*.hotspots.*.label' => 'required_with:steps.*.hotspots|string',
@@ -149,7 +149,7 @@ class AdminTutorialController extends Controller
                     'tutorial_id' => $tutorial->id,
                     'step_number' => $index + 1,
                     'title' => $step['title'],
-                    'content' => $step['content'],
+                    'instruction' => $step['instruction'],
                 ]);
 
                 // Hotspots erstellen

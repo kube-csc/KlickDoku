@@ -4,6 +4,72 @@
 @section('heading', 'Anleitung bearbeiten')
 
 @section('content')
+
+<!-- Bild-Upload Formular (separat, vor dem Hauptformular) -->
+<form action="{{ route('admin.guides.images.store', $guide->id) }}" method="POST" enctype="multipart/form-data" class="bg-white rounded-lg shadow p-6 mb-6">
+    @csrf
+    <h3 class="text-lg font-medium text-gray-900 mb-4">Bilder</h3>
+    
+    <!-- Bestehende Bilder -->
+    @if($guide->images->whereNull('guide_step_id')->count() > 0)
+        <div class="grid grid-cols-3 gap-4 mb-4">
+            @foreach($guide->images->whereNull('guide_step_id') as $image)
+                <div class="relative group">
+                    <img src="{{ asset('storage/' . $image->path) }}" alt="{{ $image->alt_text ?? '' }}"
+                         loading="lazy"
+                         class="w-full h-32 object-cover rounded-lg border">
+                    <button type="button" 
+                            onclick="confirmDelete('{{ route('admin.guide.images.destroy', $image->id) }}')"
+                            class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition">
+                        ✕
+                    </button>
+                    @if($image->caption)
+                        <p class="text-xs text-gray-500 mt-1 text-center">{{ $image->caption }}</p>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    @endif
+
+    <!-- Bild hochladen -->
+    <div class="bg-gray-50 p-4 rounded-lg">
+        @if(session('success'))
+            <div class="bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded mb-3 text-sm">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        @if($errors->has('image'))
+            <div class="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-3 text-sm">
+                {{ $errors->first('image') }}
+            </div>
+        @endif
+
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm text-gray-600">Bild auswählen</label>
+                <input type="file" name="image" accept="image/*" required
+                       class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                @error('image')
+                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600">Beschriftung (optional)</label>
+                <input type="text" name="caption" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600">Alt-Text (optional)</label>
+                <input type="text" name="alt_text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            </div>
+            <button type="submit" class="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition">
+                Bild hochladen
+            </button>
+        </div>
+    </div>
+</form>
+
+<!-- Hauptformular für Anleitung + Schritte -->
 <form action="{{ route('admin.guides.update', $guide) }}" method="POST">
     @csrf
     @method('PUT')
@@ -102,55 +168,6 @@
             <label for="published" class="ml-2 block text-sm text-gray-700">Veröffentlicht</label>
         </div>
 
-        <!-- Bilder für Anleitung (global) -->
-        <div class="border-t pt-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Bilder</h3>
-            
-            <!-- Bestehende Bilder -->
-            @if($guide->images->whereNull('guide_step_id')->count() > 0)
-                <div class="grid grid-cols-3 gap-4 mb-4">
-                    @foreach($guide->images->whereNull('guide_step_id') as $image)
-                        <div class="relative group">
-                            <img src="{{ asset('storage/' . $image->path) }}" alt="{{ $image->alt_text ?? '' }}"
-                                 loading="lazy"
-                                 class="w-full h-32 object-cover rounded-lg border">
-                            <button type="button" 
-                                    onclick="confirmDelete('{{ route('admin.guide.images.destroy', $image->id) }}')"
-                                    class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition">
-                                ✕
-                            </button>
-                            @if($image->caption)
-                                <p class="text-xs text-gray-500 mt-1 text-center">{{ $image->caption }}</p>
-                            @endif
-                        </div>
-                    @endforeach
-                </div>
-            @endif
-
-            <!-- Bild hochladen -->
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <form action="{{ route('admin.guides.images.store', $guide->id) }}" method="POST" enctype="multipart/form-data" class="space-y-3">
-                    @csrf
-                    <div>
-                        <label class="block text-sm text-gray-600">Bild auswählen</label>
-                        <input type="file" name="image" accept="image/*" required
-                               class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-600">Beschriftung (optional)</label>
-                        <input type="text" name="caption" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-600">Alt-Text (optional)</label>
-                        <input type="text" name="alt_text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                    </div>
-                    <button type="submit" class="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition">
-                        Bild hochladen
-                    </button>
-                </form>
-            </div>
-        </div>
-
         <!-- Schritte -->
         <div class="border-t pt-6">
             <div class="flex justify-between items-center mb-4">
@@ -176,8 +193,8 @@
                         </div>
                         <div>
                             <label class="block text-sm text-gray-600">Beschreibung *</label>
-                            <textarea name="steps[{{ $index }}][content]" rows="3" required
-                                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">{{ old("steps.$index.content", $step->content) }}</textarea>
+                            <textarea name="steps[{{ $index }}][description]" rows="3" required
+                                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">{{ old("steps.$index.description", $step->description) }}</textarea>
                         </div>
                         <div>
                             <label class="block text-sm text-gray-600">Tipp (optional)</label>
@@ -307,7 +324,7 @@ document.getElementById('addStep').addEventListener('click', function() {
             </div>
             <div>
                 <label class="block text-sm text-gray-600">Beschreibung *</label>
-                <textarea name="steps[${stepCount}][content]" rows="3" required
+                <textarea name="steps[${stepCount}][description]" rows="3" required
                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
             </div>
             <div>

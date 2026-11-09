@@ -26,9 +26,9 @@ use Illuminate\Support\Facades\Route;
 // Kein weiterer Code-Änderungen notwendig!
 $locales = config('app.supported_locales', ['de', 'en']);
 
-// Startseite (ohne Locale-Präfix – leitet weiter)
+// Startseite (ohne Locale-Präfix – Sprachauswahl)
 Route::get('/', function () {
-    return redirect()->to('de/');
+    return view('language-select');
 })->name('home');
 
 // Öffentliche Routen mit Sprach-Präfix
@@ -104,9 +104,9 @@ Route::middleware([
     Route::resource('pages', AdminPageController::class);
 
     // Bild-Upload
-    Route::post('guides/{guide}/images/step', [AdminImageController::class, 'storeGuideImage'])
+    Route::post('guides/{guide:id}/images/step', [AdminImageController::class, 'storeGuideImage'])
         ->name('guides.images.step.store');
-    Route::post('guides/{guide}/images', [AdminImageController::class, 'storeGuideGlobalImage'])
+    Route::post('guides/{guide:id}/images', [AdminImageController::class, 'storeGuideGlobalImage'])
         ->name('guides.images.store');
     Route::delete('guide-images/{image}', [AdminImageController::class, 'destroyGuideImage'])
         ->name('guide.images.destroy');
