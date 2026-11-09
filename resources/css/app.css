@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+[x-cloak] {
+    display: none;
+}
+
+/* Print Styles */
+@media print {
+    /* Navigation, Footer und nicht-druckbare Elemente ausblenden */
+    nav, footer, .no-print,
+    a[href^="#"], button, form,
+    .hotspot-pulse, .hotspot-core, .hotspot-label,
+    .tutorial-hotspot,
+    [role="alert"],
+    .fixed, .sticky {
+        display: none !important;
+    }
+
+    /* Body-Reset für Druck */
+    body {
+        background: white !important;
+        color: black !important;
+        font-size: 12pt;
+        line-height: 1.5;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Hauptinhalt ohne Schatten und Ränder */
+    main, main > * {
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        background: white !important;
+    }
+
+    /* Links als Text anzeigen */
+    a {
+        color: black !important;
+        text-decoration: none !important;
+    }
+
+    a[href^="http"]::after,
+    a[href^="/"]::after {
+        content: " (" attr(href) ")";
+        font-size: 9pt;
+        color: #666;
+    }
+
+    /* Titel hervorheben */
+    h1 { font-size: 20pt !important; margin-bottom: 12pt !important; }
+    h2 { font-size: 16pt !important; margin-top: 18pt !important; margin-bottom: 8pt !important; }
+    h3 { font-size: 14pt !important; margin-top: 12pt !important; margin-bottom: 6pt !important; }
+
+    /* Schritte als klare Blöcke */
+    .bg-white.rounded-lg.shadow {
+        page-break-inside: avoid;
+        margin-bottom: 12pt !important;
+        padding: 8pt !important;
+    }
+
+    /* Tipps und Warnungen als Boxen */
+    .bg-green-50, .bg-yellow-50 {
+        border: 1px solid #ccc !important;
+        page-break-inside: avoid;
+    }
+
+    /* Bilder skalieren */
+    img {
+        max-width: 100% !important;
+        height: auto !important;
+        page-break-inside: avoid;
+    }
+
+    /* Seitenumbruch vermeiden */
+    p, li, td, th {
+        orphans: 3;
+        widows: 3;
+    }
+
+    /* Tabellen */
+    table {
+        page-break-inside: auto;
+        width: 100% !important;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    /* Druck-Header mit Titel und Datum */
+    @page {
+        margin: 2cm;
+        @top-center {
+            content: element(header);
+        }
+        @bottom-center {
+            content: "Seite " counter(page) " von " counter(pages);
+            font-size: 9pt;
+            color: #666;
+        }
+    }
+}
