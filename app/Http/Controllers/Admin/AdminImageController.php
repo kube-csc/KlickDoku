@@ -11,36 +11,27 @@ use App\Models\TutorialStep;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Gd\Decoder;
 
 class AdminImageController extends Controller
 {
-    protected ImageManager $imageManager;
-
-    public function __construct(ImageManager $imageManager)
-    {
-        $this->imageManager = $imageManager;
-    }
-
     /**
      * Bild komprimieren und speichern.
      * Maximale Breite: 1920px, Qualität: 80%, Format: JPEG.
      */
     protected function compressAndStore($file, $directory)
     {
-        $image = $this->imageManager->read($file->getPathname());
+        $manager = ImageManager::gd();
+        $image = $manager->read($file->getPathname());
 
-        // Auf maximale Breite von 1920px skalieren (Höhe proportional)
-        $image->scaleWidth(1920, function ($constraint) {
-            $constraint->upsideDown(); // Nicht vergrößern, nur verkleinern
-        });
+        // Auf maximale Breite von 1920px skalieren (Höhe proportional, nicht vergrößern)
+        $image->scaleDown(1920, null);
 
         $extension = $file->getClientOriginalExtension();
         $filename = Str::uuid() . '.' . $extension;
         $path = $directory . '/' . $filename;
 
-        // Komprimiertes Bild speichern
-        $contents = $image->encodeByExtension(80);
+        // Komprimiertes Bild speichern (Intervention Image v3: encodeByExtension mit quality named arg)
+        $contents = $image->encodeByExtension($extension, quality: 80);
         \Illuminate\Support\Facades\Storage::disk('public')->put($path, $contents);
 
         return $path;

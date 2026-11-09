@@ -65,7 +65,30 @@ class TutorialController extends Controller
             }
         }
 
-        return view('tutorials.show', compact('tutorial', 'progress'));
+        // Steps als JSON-Array für den JavaScript-Player vorbereiten
+        $stepsData = $tutorial->steps->map(function ($step) use ($locale) {
+            return [
+                'id' => $step->id,
+                'step_number' => $step->step_number,
+                'title' => $step->getTranslationAttribute('title', $locale) ?? $step->title,
+                'instruction' => $step->getTranslationAttribute('instruction', $locale) ?? $step->instruction,
+                'tip' => $step->getTranslationAttribute('tip', $locale) ?? $step->tip,
+                'warning' => $step->getTranslationAttribute('warning', $locale) ?? $step->warning,
+                'screenshot_path' => $step->screenshot_path,
+                'hotspots' => $step->hotspots->map(function ($h) {
+                    return [
+                        'id' => $h->id,
+                        'position_x' => $h->position_x,
+                        'position_y' => $h->position_y,
+                        'radius' => $h->radius ?? 30,
+                        'label' => $h->label,
+                        'is_clickable' => $h->is_clickable,
+                    ];
+                })->values()->all(),
+            ];
+        })->values()->all();
+
+        return view('tutorials.show', compact('tutorial', 'progress', 'stepsData', 'locale'));
     }
 
     /**

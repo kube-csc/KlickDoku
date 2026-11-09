@@ -110,7 +110,7 @@ document.getElementById('addStep').addEventListener('click', function() {
             </div>
             <div>
                 <label class="block text-sm text-gray-600">Beschreibung *</label>
-                <textarea name="steps[${stepCount}][content]" rows="3" required
+                <textarea name="steps[${stepCount}][instruction]" rows="3" required
                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
             </div>
             <div class="border-t pt-3">

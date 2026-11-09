@@ -44,7 +44,7 @@ class AdminGuideController extends Controller
             'og_image' => 'nullable|string|max:255',
             'steps' => 'nullable|array',
             'steps.*.title' => 'required_with:steps|string|max:255',
-            'steps.*.content' => 'required_with:steps|string',
+            'steps.*.description' => 'required_with:steps|string',
             'steps.*.tip' => 'nullable|string',
             'steps.*.warning' => 'nullable|string',
         ]);
@@ -74,7 +74,7 @@ class AdminGuideController extends Controller
                     'guide_id' => $guide->id,
                     'step_number' => $index + 1,
                     'title' => $step['title'],
-                    'content' => $step['content'],
+                    'description' => $step['description'],
                     'tip' => $step['tip'] ?? null,
                     'warning' => $step['warning'] ?? null,
                 ]);
@@ -111,7 +111,7 @@ class AdminGuideController extends Controller
             'og_image' => 'nullable|string|max:255',
             'steps' => 'nullable|array',
             'steps.*.title' => 'required_with:steps|string|max:255',
-            'steps.*.content' => 'required_with:steps|string',
+            'steps.*.description' => 'required_with:steps|string',
             'steps.*.tip' => 'nullable|string',
             'steps.*.warning' => 'nullable|string',
         ]);
@@ -143,7 +143,7 @@ class AdminGuideController extends Controller
                     'guide_id' => $guide->id,
                     'step_number' => $index + 1,
                     'title' => $step['title'],
-                    'content' => $step['content'],
+                    'description' => $step['description'],
                     'tip' => $step['tip'] ?? null,
                     'warning' => $step['warning'] ?? null,
                 ]);

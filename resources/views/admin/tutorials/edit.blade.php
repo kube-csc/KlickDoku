@@ -124,8 +124,8 @@
                         </div>
                         <div>
                             <label class="block text-sm text-gray-600">Beschreibung *</label>
-                            <textarea name="steps[{{ $index }}][content]" rows="3" required
-                                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">{{ old("steps.$index.content", $step->content) }}</textarea>
+                            <textarea name="steps[{{ $index }}][instruction]" rows="3" required
+                                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">{{ old("steps.$index.instruction", $step->instruction) }}</textarea>
                         </div>
                         <!-- Screenshot für diesen Schritt -->
                         <div class="border-t pt-3">
@@ -135,31 +135,21 @@
                                     <div class="relative inline-block">
                                         <img src="{{ asset('storage/' . $step->screenshot_path) }}" 
                                              alt="Screenshot" loading="lazy" class="w-64 h-auto rounded-lg border">
-                                        <form action="{{ route('admin.tutorials.screenshot.destroy', [$tutorial->id, $step->id]) }}" 
-                                              method="POST" class="absolute top-1 right-1"
-                                              onsubmit="return confirm('Screenshot löschen?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600">
-                                                ✕
-                                            </button>
-                                        </form>
+                                        <button type="button" onclick="confirmDeleteScreenshot({{ $tutorial->id }}, {{ $step->id }})"
+                                                class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600">
+                                            ✕
+                                        </button>
                                     </div>
                                 </div>
                             @endif
-                            <form action="{{ route('admin.tutorials.screenshot.store', $tutorial->id) }}" 
-                                  method="POST" enctype="multipart/form-data" class="flex gap-2 items-end">
-                                @csrf
-                                <input type="hidden" name="step_id" value="{{ $step->id }}">
+                            <div class="flex gap-2 items-end">
                                 <div class="flex-1">
                                     <label class="block text-sm text-gray-600">Screenshot hochladen</label>
-                                    <input type="file" name="screenshot" accept="image/*" required
+                                    <input type="file" name="screenshot_{{ $step->id }}" accept="image/*"
+                                           onchange="uploadScreenshot({{ $tutorial->id }}, {{ $step->id }}, this)"
                                            class="mt-1 block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700">
                                 </div>
-                                <button type="submit" class="px-3 py-1.5 bg-purple-500 text-white text-xs rounded hover:bg-purple-600">
-                                    Upload
-                                </button>
-                            </form>
+                            </div>
                         </div>
                         <div class="border-t pt-3">
                             <div class="flex justify-between items-center mb-2">
@@ -282,7 +272,7 @@ document.getElementById('addStep').addEventListener('click', function() {
             </div>
             <div>
                 <label class="block text-sm text-gray-600">Beschreibung *</label>
-                <textarea name="steps[${stepCount}][content]" rows="3" required
+                <textarea name="steps[${stepCount}][instruction]" rows="3" required
                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
             </div>
             <div class="border-t pt-3">
@@ -340,6 +330,50 @@ function updateStepNumbers() {
     steps.forEach((step, index) => {
         step.querySelector('h4').textContent = `Schritt ${index + 1}`;
     });
+}
+
+function uploadScreenshot(tutorialId, stepId, input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('screenshot', file);
+    formData.append('step_id', stepId);
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+    fetch(`/admin/tutorials/${tutorialId}/screenshot`, {
+        method: 'POST',
+        body: formData,
+    })
+    .then(response => {
+        if (response.redirected) {
+            window.location.reload();
+        } else {
+            alert('Fehler beim Hochladen des Screenshots.');
+        }
+    })
+    .catch(error => {
+        console.error('Upload Fehler:', error);
+        alert('Fehler beim Hochladen des Screenshots.');
+    });
+}
+
+function confirmDeleteScreenshot(tutorialId, stepId) {
+    if (confirm('Screenshot wirklich löschen?')) {
+        const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        fetch(`/admin/tutorials/${tutorialId}/screenshot/${stepId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': token,
+                'X-HTTP-Method-Override': 'DELETE',
+            },
+        })
+        .then(response => {
+            if (response.redirected) {
+                window.location.reload();
+            }
+        });
+    }
 }
 </script>
 @endsection

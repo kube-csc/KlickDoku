@@ -70,4 +70,11 @@ return [
     'hotspots' => 'Hotspots',
     'tutorial_completed' => 'Tutorial abgeschlossen! 🎉',
     'complete_tutorial' => 'Tutorial abschließen',
+    'explore_guides' => 'Anleitungen entdecken',
+    'explore_guides_description' => 'Schritt-für-Schritt-Anleitungen mit Screenshots für alle Funktionen.',
+    'explore_tutorials' => 'Tutorials ansehen',
+    'explore_tutorials_description' => 'Interaktive Tutorials zum Ausprobieren der Funktionen.',
+    'explore_project' => 'Projekt verstehen',
+    'explore_project_description' => 'Erfahren Sie mehr über das Vereinsverwaltungs-Projekt.',
+    'no_login_required' => 'Kein Login erforderlich — einfach loslegen!',
 ];
