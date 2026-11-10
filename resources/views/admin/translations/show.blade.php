@@ -130,26 +130,47 @@
 
                     <div class="space-y-3">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Titel *
-                            </label>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="block text-sm font-medium text-gray-700">
+                                    Titel *
+                                </label>
+                                <button type="button" onclick="aiTranslateField('{{ $locale }}', 'title', '{{ $defaultLocale }}')"
+                                        class="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition"
+                                        title="Titel automatisch übersetzen">
+                                    ✨ KI übersetzen
+                                </button>
+                            </div>
                             <input type="text" name="title" id="title_{{ $locale }}"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Beschreibung
-                            </label>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="block text-sm font-medium text-gray-700">
+                                    Beschreibung
+                                </label>
+                                <button type="button" onclick="aiTranslateField('{{ $locale }}', 'description', '{{ $defaultLocale }}')"
+                                        class="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition"
+                                        title="Beschreibung automatisch übersetzen">
+                                    ✨ KI übersetzen
+                                </button>
+                            </div>
                             <textarea name="description" id="description_{{ $locale }}" rows="3"
                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                         </div>
 
                         @if($type !== 'categories')
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Inhalt
-                            </label>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="block text-sm font-medium text-gray-700">
+                                    Inhalt
+                                </label>
+                                <button type="button" onclick="aiTranslateField('{{ $locale }}', 'content', '{{ $defaultLocale }}')"
+                                        class="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition"
+                                        title="Inhalt automatisch übersetzen">
+                                    ✨ KI übersetzen
+                                </button>
+                            </div>
                             <textarea name="content" id="content_{{ $locale }}" rows="6"
                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                         </div>
@@ -222,6 +243,56 @@ document.getElementById('translationModal').addEventListener('click', function(e
         closeTranslationModal();
     }
 });
+
+// KI-Übersetzung eines einzelnen Feldes
+async function aiTranslateField(targetLocale, field, sourceLocale) {
+    const originalField = document.getElementById(field + '_' + sourceLocale);
+    const originalText = originalField ? originalField.value.trim() : '';
+    
+    if (!originalText) {
+        alert('Bitte geben Sie zuerst den Originaltext ein.');
+        return;
+    }
+
+    const targetField = document.getElementById(field + '_' + targetLocale);
+    if (!targetField) return;
+
+    const btn = targetField.closest('div').querySelector('button[onclick*="aiTranslateField"]');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳';
+    }
+
+    try {
+        const response = await fetch('{{ route("admin.ai.generate-translation") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || document.querySelector('input[name="_token"]')?.value || '',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                originalText: originalText,
+                sourceLocale: sourceLocale,
+                targetLocale: targetLocale,
+                context: field === 'content' ? 'Seiteninhalt' : field === 'description' ? 'Kurze Beschreibung' : 'Titel'
+            })
+        });
+
+        const data = await response.json();
+        if (data.translation) {
+            targetField.value = data.translation;
+        }
+    } catch (error) {
+        console.error('Fehler bei der KI-Übersetzung:', error);
+        alert('Fehler beim Übersetzen.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '✨ KI übersetzen';
+        }
+    }
+}
 </script>
 @endpush
 @endsection

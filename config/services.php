@@ -35,4 +35,42 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | AI Description Service
+    |--------------------------------------------------------------------------
+    |
+    | Provider: "mock" (Standard), "openai" oder "groq"
+    |
+    | GitHub Copilot wird NICHT unterstützt:
+    | Copilot hat keine öffentliche API für Textgenerierung und kein PHP-SDK.
+    | Es funktioniert nur als IDE-Plugin (PhpStorm, VS Code etc.).
+    |
+    | Umstellung auf echte KI:
+    |   AI_PROVIDER=openai    (oder "groq")
+    |   OPENAI_API_KEY=sk-...
+    |   OPENAI_MODEL=gpt-4o-mini
+    |   GROQ_API_KEY=gsk_...
+    |   GROQ_MODEL=llama-3.3-70b-versatile
+    |
+    */
+
+    'ai' => [
+        'provider' => env('AI_PROVIDER', 'mock'),
+
+        // OpenAI-Konfiguration
+        'openai' => [
+            'api_key' => env('OPENAI_API_KEY'),
+            'model'   => env('OPENAI_MODEL', 'gpt-4o-mini'),
+            'url'     => 'https://api.openai.com/v1/chat/completions',
+        ],
+
+        // Groq-Konfiguration
+        'groq' => [
+            'api_key' => env('GROQ_API_KEY'),
+            'model'   => env('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+            'url'     => 'https://api.groq.com/openai/v1/chat/completions',
+        ],
+    ],
+
 ];

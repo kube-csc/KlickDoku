@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\AdminImageController;
 use App\Http\Controllers\Admin\AdminStatisticsController;
 use App\Http\Controllers\Admin\AdminTranslationController;
 use App\Http\Controllers\Admin\AdminStepTranslationController;
+use App\Http\Controllers\Admin\AdminAIController;
 use App\Http\Controllers\Api\ApiController;
 use App\Models\TutorialStep;
 use App\Http\Controllers\CommentController;
@@ -138,6 +139,18 @@ Route::middleware([
         ->name('tutorial.step.translations.store');
     Route::delete('tutorials/{tutorial}/steps/{stepId}/translations/{locale}', [AdminStepTranslationController::class, 'destroyTutorialStep'])
         ->name('tutorial.step.translations.destroy');
+
+    // KI-Beschreibung generieren
+    Route::post('/ai/generate-description', [AdminAIController::class, 'generateDescription'])
+        ->name('ai.generate-description');
+    
+    // KI-Übersetzung generieren
+    Route::post('/ai/generate-translation', [AdminAIController::class, 'generateTranslation'])
+        ->name('ai.generate-translation');
+
+    // KI-Inhalt generieren (vollständiger Anleitungsentwurf)
+    Route::post('/ai/generate-content', [AdminAIController::class, 'generateContent'])
+        ->name('ai.generate-content');
 });
 
 // API-Endpunkte (öffentlich, JSON)
