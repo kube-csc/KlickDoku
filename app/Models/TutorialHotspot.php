@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class TutorialHotspot extends Model
 {
     protected $fillable = [
-        'tutorial_step_id', 'hotspot_type', 'position_x', 'position_y',
-        'radius', 'label', 'cursor_type', 'click_count', 'is_clickable', 'sort_order'
+        'tutorial_step_id', 'selector', 'hotspot_type', 'position_x', 'position_y',
+        'radius', 'label', 'link', 'cursor_type', 'click_count', 'is_clickable', 'sort_order'
     ];
 
     protected $casts = [

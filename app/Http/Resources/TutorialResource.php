@@ -43,6 +43,7 @@ class TutorialResource extends JsonResource
                                 'x' => $hs->x,
                                 'y' => $hs->y,
                                 'label' => $hs->label,
+                                'link' => $hs->link,
                                 'description' => $hs->description,
                             ]);
                         }),

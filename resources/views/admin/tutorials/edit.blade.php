@@ -4,7 +4,7 @@
 @section('heading', 'Tutorial bearbeiten')
 
 @section('content')
-<form action="{{ route('admin.tutorials.update', $tutorial) }}" method="POST">
+<form action="{{ route('admin.tutorials.update', $tutorial) }}" method="POST" novalidate>
     @csrf
     @method('PUT')
     
@@ -117,6 +117,9 @@
                         <button type="button" class="remove-step text-red-500 hover:text-red-700 text-sm">Entfernen</button>
                     </div>
                     <div class="space-y-3">
+                        <input type="hidden" name="steps[{{ $index }}][screenshot_path]" value="{{ old("steps.$index.screenshot_path", $step->screenshot_path) }}">
+                        <input type="hidden" name="steps[{{ $index }}][screenshot_width]" value="{{ old("steps.$index.screenshot_width", $step->screenshot_width) }}">
+                        <input type="hidden" name="steps[{{ $index }}][screenshot_height]" value="{{ old("steps.$index.screenshot_height", $step->screenshot_height) }}">
                         <div>
                             <label class="block text-sm text-gray-600">Titel *</label>
                             <input type="text" name="steps[{{ $index }}][title]" value="{{ old("steps.$index.title", $step->title) }}" required
@@ -161,13 +164,20 @@
                             <div class="hotspots-container" data-step="{{ $index }}">
                                 @foreach($step->hotspots as $hIndex => $hotspot)
                                 <div class="hotspot-item flex gap-2 mb-2">
+                                    <input type="hidden" name="steps[{{ $index }}][hotspots][{{ $hIndex }}][hotspot_type]" value="{{ old("steps.$index.hotspots.$hIndex.hotspot_type", $hotspot->hotspot_type) }}">
+                                    <input type="hidden" name="steps[{{ $index }}][hotspots][{{ $hIndex }}][position_x]" value="{{ old("steps.$index.hotspots.$hIndex.position_x", $hotspot->position_x) }}">
+                                    <input type="hidden" name="steps[{{ $index }}][hotspots][{{ $hIndex }}][position_y]" value="{{ old("steps.$index.hotspots.$hIndex.position_y", $hotspot->position_y) }}">
                                     <input type="text" name="steps[{{ $index }}][hotspots][{{ $hIndex }}][selector]" 
-                                           value="{{ old("steps.$index.hotspots.$hIndex.selector", $hotspot->selector) }}"
-                                           placeholder="CSS-Selector (z.B. #button)" required
+                                           value="{{ old("steps.$index.hotspots.$hIndex.selector", $hotspot->selector ?? '') }}"
+                                           placeholder="CSS-Selector (z.B. #button)"
                                            class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
                                     <input type="text" name="steps[{{ $index }}][hotspots][{{ $hIndex }}][label]" 
                                            value="{{ old("steps.$index.hotspots.$hIndex.label", $hotspot->label) }}"
                                            placeholder="Label" required
+                                           class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
+                                    <input type="text" name="steps[{{ $index }}][hotspots][{{ $hIndex }}][link]" 
+                                           value="{{ old("steps.$index.hotspots.$hIndex.link", $hotspot->link) }}"
+                                           placeholder="Link (optional)"
                                            class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
                                     <button type="button" class="remove-hotspot text-red-500 hover:text-red-700 text-sm">✕</button>
                                 </div>
@@ -196,42 +206,35 @@
                                             {{ $locale === 'en' ? '🇬🇧 English' : '🇩🇪 Deutsch' }}
                                         </h5>
                                         @if($trans)
-                                            <form action="{{ route('admin.tutorial.step.translations.destroy', [$tutorial, $step->id, $locale]) }}" method="POST"
-                                                  onsubmit="return confirm('Übersetzung wirklich löschen?')">
-                                                @csrf @method('DELETE')
-                                                <button type="submit" class="text-xs text-red-500 hover:text-red-700">Löschen</button>
-                                            </form>
+                                            <button type="button" onclick="deleteStepTranslation({{ $tutorial->id }}, {{ $step->id }}, '{{ $locale }}')"
+                                                    class="text-xs text-red-500 hover:text-red-700">Löschen</button>
                                         @endif
                                     </div>
-                                    <form action="{{ route('admin.tutorial.step.translations.store', [$tutorial, $step->id]) }}" method="POST" class="space-y-2">
-                                        @csrf
-                                        <input type="hidden" name="locale" value="{{ $locale }}">
+                                    <div class="space-y-2">
+                                        <input type="hidden" name="step_translations[{{ $step->id }}][{{ $locale }}][locale]" value="{{ $locale }}">
                                         <div>
                                             <label class="block text-xs text-purple-700">Titel</label>
-                                            <input type="text" name="title" value="{{ old("step_trans.$step->id.$locale.title", $trans->title ?? '') }}"
+                                            <input type="text" name="step_translations[{{ $step->id }}][{{ $locale }}][title]" value="{{ old("step_trans.$step->id.$locale.title", $trans->title ?? '') }}"
                                                    class="mt-1 block w-full rounded-md border-purple-200 shadow-sm text-sm">
                                         </div>
                                         <div>
                                             <label class="block text-xs text-purple-700">Beschreibung</label>
-                                            <textarea name="instruction" rows="2"
+                                            <textarea name="step_translations[{{ $step->id }}][{{ $locale }}][instruction]" rows="2"
                                                       class="mt-1 block w-full rounded-md border-purple-200 shadow-sm text-sm">{{ old("step_trans.$step->id.$locale.instruction", $trans->instruction ?? '') }}</textarea>
                                         </div>
                                         <div class="grid grid-cols-2 gap-2">
                                             <div>
                                                 <label class="block text-xs text-purple-700">Tipp</label>
-                                                <textarea name="tip" rows="1"
+                                                <textarea name="step_translations[{{ $step->id }}][{{ $locale }}][tip]" rows="1"
                                                           class="mt-1 block w-full rounded-md border-purple-200 shadow-sm text-sm">{{ old("step_trans.$step->id.$locale.tip", $trans->tip ?? '') }}</textarea>
                                             </div>
                                             <div>
                                                 <label class="block text-xs text-purple-700">Warnung</label>
-                                                <textarea name="warning" rows="1"
+                                                <textarea name="step_translations[{{ $step->id }}][{{ $locale }}][warning]" rows="1"
                                                           class="mt-1 block w-full rounded-md border-purple-200 shadow-sm text-sm">{{ old("step_trans.$step->id.$locale.warning", $trans->warning ?? '') }}</textarea>
                                             </div>
                                         </div>
-                                        <button type="submit" class="mt-2 px-3 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600 transition">
-                                            {{ $trans ? 'Aktualisieren' : 'Speichern' }}
-                                        </button>
-                                    </form>
+                                    </div>
                                 </div>
                             @endforeach
                         </div>
@@ -314,6 +317,9 @@ document.addEventListener('click', function(e) {
             <input type="text" name="steps[${stepIndex}][hotspots][${hotspotCount}][label]" 
                    placeholder="Label" required
                    class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
+            <input type="text" name="steps[${stepIndex}][hotspots][${hotspotCount}][link]" 
+                   placeholder="Link (optional)"
+                   class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
             <button type="button" class="remove-hotspot text-red-500 hover:text-red-700 text-sm">✕</button>
         </div>`;
         
@@ -362,6 +368,33 @@ function confirmDeleteScreenshot(tutorialId, stepId) {
     if (confirm('Screenshot wirklich löschen?')) {
         const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         fetch(`/admin/tutorials/${tutorialId}/screenshot/${stepId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': token,
+                'X-HTTP-Method-Override': 'DELETE',
+            },
+        })
+        .then(response => {
+            if (response.redirected) {
+                window.location.reload();
+            }
+        });
+    }
+}
+
+function toggleStepTranslation(stepId, type) {
+    const el = document.getElementById('stepTranslation_' + stepId);
+    if (el.classList.contains('hidden')) {
+        el.classList.remove('hidden');
+    } else {
+        el.classList.add('hidden');
+    }
+}
+
+function deleteStepTranslation(tutorialId, stepId, locale) {
+    if (confirm('Übersetzung wirklich löschen?')) {
+        const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        fetch(`/admin/tutorials/${tutorialId}/steps/${stepId}/translations/${locale}`, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': token,

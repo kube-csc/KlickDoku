@@ -82,6 +82,7 @@ class TutorialController extends Controller
                         'position_y' => $h->position_y,
                         'radius' => $h->radius ?? 30,
                         'label' => $h->label,
+                        'link' => $h->link,
                         'is_clickable' => $h->is_clickable,
                     ];
                 })->values()->all(),
