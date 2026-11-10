@@ -246,9 +246,14 @@
                                         <input type="text" id="stepImageAltTextInput_{{ $step->id }}" class="mt-1 block w-full rounded-md border-blue-200 shadow-sm text-sm">
                                     </div>
                                 </div>
-                                <button type="button" onclick="uploadStepImage({{ $step->id }})" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">
-                                    Bild hochladen
-                                </button>
+                                <div class="flex gap-2">
+                                    <button type="button" onclick="uploadStepImage({{ $step->id }})" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">
+                                        Bild hochladen
+                                    </button>
+                                    <button type="button" onclick="startGuideScreenshotCapture({{ $guide->id }}, {{ $step->id }})" class="px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 transition">
+                                        📸 Screenshot mit Bereichsauswahl
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

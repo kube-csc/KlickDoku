@@ -115,8 +115,19 @@ document.getElementById('addStep').addEventListener('click', function() {
             </div>
             <div class="border-t pt-3">
                 <p class="text-sm text-gray-600 mb-2">Screenshot hochladen:</p>
-                <input type="file" name="screenshot_new_${stepCount}" accept="image/*"
-                       class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700">
+                <div class="flex gap-2 items-end">
+                    <div class="flex-1">
+                        <input type="file" name="screenshot_new_${stepCount}" accept="image/*"
+                               class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700">
+                    </div>
+                    <div>
+                        <button type="button" onclick="startScreenshotCaptureForNew(${stepCount})"
+                                class="px-3 py-2 bg-green-500 text-white text-xs rounded hover:bg-green-600 whitespace-nowrap"
+                                title="Wählen Sie einen Bereich auf dem Bildschirm aus, der als Screenshot hochgeladen wird">
+                            📸 Screenshot mit Bereichsauswahl
+                        </button>
+                    </div>
+                </div>
                 <div id="screenshotPreview_${stepCount}" class="mt-2 hidden">
                     <p class="text-xs text-gray-400">🔍 Auf das Bild klicken, um Hotspot-Positionen visuell zu setzen</p>
                 </div>

@@ -10,6 +10,7 @@ use App\Models\TutorialStep;
 use App\Models\TutorialHotspot;
 use App\Helpers\CacheHelper;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AdminTutorialController extends Controller
@@ -54,6 +55,7 @@ class AdminTutorialController extends Controller
             'steps.*.screenshot_path' => 'nullable|string|max:255|sometimes',
             'steps.*.screenshot_width' => 'nullable|integer|sometimes',
             'steps.*.screenshot_height' => 'nullable|integer|sometimes',
+            'steps.*.screenshot_data' => 'nullable|string|sometimes',
         ]);
 
         $tutorial = Tutorial::create([
@@ -76,14 +78,43 @@ class AdminTutorialController extends Controller
         // Schritte erstellen
         if (!empty($validated['steps'])) {
             foreach ($validated['steps'] as $index => $step) {
+                // Screenshot aus Base64-Daten speichern (von region-screenshot-js)
+                $screenshotPath = $step['screenshot_path'] ?? '';
+                $screenshotWidth = $step['screenshot_width'] ?? 0;
+                $screenshotHeight = $step['screenshot_height'] ?? 0;
+
+                if (!empty($step['screenshot_data'])) {
+                    // Base64-Daten extrahieren (data:image/png;base64,...)
+                    $base64Data = $step['screenshot_data'];
+                    if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $typeMatches)) {
+                        $extension = $typeMatches[1];
+                        $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
+                        $imageData = base64_decode($base64Data);
+
+                        if ($imageData !== false) {
+                            // Bildabmessungen ermitteln
+                            $imageSize = getimagesizefromstring($imageData);
+                            if ($imageSize !== false) {
+                                $screenshotWidth = $imageSize[0];
+                                $screenshotHeight = $imageSize[1];
+                            }
+
+                            // Datei speichern
+                            $filename = 'tutorials/' . $tutorial->id . '/step_' . ($index + 1) . '_' . Str::random(10) . '.' . $extension;
+                            Storage::disk('public')->put($filename, $imageData);
+                            $screenshotPath = $filename;
+                        }
+                    }
+                }
+
                 $tutorialStep = TutorialStep::create([
                     'tutorial_id' => $tutorial->id,
                     'step_number' => $index + 1,
                     'title' => $step['title'],
                     'instruction' => $step['instruction'],
-                    'screenshot_path' => $step['screenshot_path'] ?? '',
-                    'screenshot_width' => $step['screenshot_width'] ?? 0,
-                    'screenshot_height' => $step['screenshot_height'] ?? 0,
+                    'screenshot_path' => $screenshotPath,
+                    'screenshot_width' => $screenshotWidth,
+                    'screenshot_height' => $screenshotHeight,
                 ]);
 
                 // Hotspots erstellen
@@ -142,6 +173,7 @@ class AdminTutorialController extends Controller
             'steps.*.screenshot_path' => 'nullable|string|max:255|sometimes',
             'steps.*.screenshot_width' => 'nullable|integer|sometimes',
             'steps.*.screenshot_height' => 'nullable|integer|sometimes',
+            'steps.*.screenshot_data' => 'nullable|string|sometimes',
         ]);
 
         $tutorial->update([
@@ -164,16 +196,58 @@ class AdminTutorialController extends Controller
 
         // Schritte aktualisieren
         if (!empty($validated['steps'])) {
+            // Alte Screenshot-Pfade sammeln (aus dem Formular gesendete Pfade sollen erhalten bleiben)
+            $keepPaths = [];
+            foreach ($validated['steps'] as $step) {
+                if (!empty($step['screenshot_path'])) {
+                    $keepPaths[] = $step['screenshot_path'];
+                }
+            }
+
+            // Nur alte Screenshot-Dateien löschen, die nicht mehr verwendet werden
+            foreach ($tutorial->steps as $oldStep) {
+                if ($oldStep->screenshot_path && !in_array($oldStep->screenshot_path, $keepPaths)) {
+                    Storage::disk('public')->delete($oldStep->screenshot_path);
+                }
+            }
+
             $tutorial->steps()->delete();
             foreach ($validated['steps'] as $index => $step) {
+                // Screenshot-Pfad aus dem Formular verwenden (bereits hochgeladene Screenshots)
+                $screenshotPath = $step['screenshot_path'] ?? null;
+                $screenshotWidth = $step['screenshot_width'] ?? null;
+                $screenshotHeight = $step['screenshot_height'] ?? null;
+
+                // Falls neuer Screenshot als Base64-Daten gesendet (von create-Seite)
+                if (empty($screenshotPath) && !empty($step['screenshot_data'])) {
+                    $base64Data = $step['screenshot_data'];
+                    if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $typeMatches)) {
+                        $extension = $typeMatches[1];
+                        $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
+                        $imageData = base64_decode($base64Data);
+
+                        if ($imageData !== false) {
+                            $imageSize = getimagesizefromstring($imageData);
+                            if ($imageSize !== false) {
+                                $screenshotWidth = $imageSize[0];
+                                $screenshotHeight = $imageSize[1];
+                            }
+
+                            $filename = 'tutorials/' . $tutorial->id . '/step_' . ($index + 1) . '_' . Str::random(10) . '.' . $extension;
+                            Storage::disk('public')->put($filename, $imageData);
+                            $screenshotPath = $filename;
+                        }
+                    }
+                }
+
                 $tutorialStep = TutorialStep::create([
                     'tutorial_id' => $tutorial->id,
                     'step_number' => $index + 1,
                     'title' => $step['title'],
                     'instruction' => $step['instruction'],
-                    'screenshot_path' => $step['screenshot_path'] ?? '',
-                    'screenshot_width' => $step['screenshot_width'] ?? 0,
-                    'screenshot_height' => $step['screenshot_height'] ?? 0,
+                    'screenshot_path' => $screenshotPath,
+                    'screenshot_width' => $screenshotWidth,
+                    'screenshot_height' => $screenshotHeight,
                 ]);
 
                 // Hotspots erstellen

@@ -155,6 +155,13 @@
                                            onchange="uploadScreenshot({{ $tutorial->id }}, {{ $step->id }}, this)"
                                            class="mt-1 block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700">
                                 </div>
+                                <div>
+                                    <button type="button" onclick="startScreenshotCapture({{ $tutorial->id }}, {{ $step->id }})"
+                                            class="mt-1 px-3 py-2 bg-green-500 text-white text-xs rounded hover:bg-green-600 whitespace-nowrap"
+                                            title="Wählen Sie einen Bereich auf dem Bildschirm aus, der als Screenshot hochgeladen wird">
+                                        📸 Screenshot mit Bereichsauswahl
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div class="border-t pt-3">
@@ -414,32 +421,46 @@ function uploadScreenshot(tutorialId, stepId, input) {
         body: formData,
     })
     .then(response => {
-        if (response.redirected) {
+        console.log('Upload-Antwort:', response.status, response.redirected);
+        if (response.ok || response.redirected) {
             window.location.reload();
-        } else {
-            alert('Fehler beim Hochladen des Screenshots.');
+            return;
         }
+        return response.text().then(text => {
+            console.error('Upload-Fehler:', response.status, text);
+            alert('Fehler beim Hochladen des Screenshots: HTTP ' + response.status);
+        });
     })
     .catch(error => {
         console.error('Upload Fehler:', error);
-        alert('Fehler beim Hochladen des Screenshots.');
+        alert('Fehler beim Hochladen des Screenshots: ' + error.message);
     });
 }
 
 function confirmDeleteScreenshot(tutorialId, stepId) {
     if (confirm('Screenshot wirklich löschen?')) {
         const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        fetch(`/admin/tutorials/${tutorialId}/screenshot/${stepId}`, {
-            method: 'POST',
+        fetch(`/admin/tutorials/${tutorialId}/steps/${stepId}/screenshot`, {
+            method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': token,
-                'X-HTTP-Method-Override': 'DELETE',
+                'Accept': 'application/json',
             },
         })
         .then(response => {
-            if (response.redirected) {
+            console.log('Delete-Antwort:', response.status, response.redirected);
+            if (response.ok || response.redirected) {
                 window.location.reload();
+                return;
             }
+            return response.text().then(text => {
+                console.error('Lösch-Fehler:', response.status, text);
+                alert('Fehler beim Löschen des Screenshots: HTTP ' + response.status);
+            });
+        })
+        .catch(error => {
+            console.error('Lösch-Fehler:', error);
+            alert('Fehler beim Löschen des Screenshots: ' + error.message);
         });
     }
 }

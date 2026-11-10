@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\AdminStatisticsController;
 use App\Http\Controllers\Admin\AdminTranslationController;
 use App\Http\Controllers\Admin\AdminStepTranslationController;
 use App\Http\Controllers\Api\ApiController;
+use App\Models\TutorialStep;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\HealthController;
 use Illuminate\Support\Facades\Route;
@@ -110,6 +111,8 @@ Route::middleware([
         ->name('guides.images.store');
     Route::delete('guide-images/{image}', [AdminImageController::class, 'destroyGuideImage'])
         ->name('guide.images.destroy');
+    Route::post('guides/{guide:id}/screenshot', [AdminImageController::class, 'storeGuideScreenshot'])
+        ->name('guides.screenshot.store');
     Route::post('tutorials/{tutorial}/screenshot', [AdminImageController::class, 'storeTutorialScreenshot'])
         ->name('tutorials.screenshot.store');
     Route::delete('tutorials/{tutorial}/steps/{step}/screenshot', [AdminImageController::class, 'destroyTutorialScreenshot'])

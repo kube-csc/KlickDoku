@@ -131,25 +131,138 @@ class AdminImageController extends Controller
     // Screenshot für Tutorial-Schritt hochladen
     public function storeTutorialScreenshot(Request $request, Tutorial $tutorial)
     {
-        $validated = $request->validate([
-            'step_id' => 'required|exists:tutorial_steps,id',
-            'screenshot' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+        \Log::info('storeTutorialScreenshot aufgerufen', [
+            'tutorial_id' => $tutorial->id,
+            'step_id' => $request->input('step_id'),
+            'has_file' => $request->hasFile('screenshot'),
+            'file_name' => $request->file('screenshot')?->getClientOriginalName() ?? 'keine',
+            'file_size' => $request->file('screenshot')?->getSize() ?? 0,
+            'file_type' => $request->file('screenshot')?->getMimeType() ?? 'keine',
         ]);
 
-        $step = TutorialStep::findOrFail($validated['step_id']);
-        $path = $this->compressAndStore($request->file('screenshot'), 'tutorials/' . $tutorial->id);
+        try {
+            $validated = $request->validate([
+                'step_id' => 'required|exists:tutorial_steps,id',
+                'screenshot' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            ]);
 
-        // Alte Screenshot-Datei löschen
-        if ($step->screenshot_path) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($step->screenshot_path);
+            \Log::info('Validierung erfolgreich', ['step_id' => $validated['step_id']]);
+
+            $step = TutorialStep::findOrFail($validated['step_id']);
+            \Log::info('TutorialStep gefunden', ['step_id' => $step->id, 'current_path' => $step->screenshot_path ?? 'null']);
+
+            $path = $this->compressAndStore($request->file('screenshot'), 'tutorials/' . $tutorial->id);
+            \Log::info('Bild gespeichert', ['path' => $path]);
+
+            // Alte Screenshot-Datei löschen
+            if ($step->screenshot_path) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($step->screenshot_path);
+                \Log::info('Alte Datei gelöscht', ['old_path' => $step->screenshot_path]);
+            }
+
+            $step->update([
+                'screenshot_path' => $path,
+            ]);
+            \Log::info('Datenbank aktualisiert', ['new_path' => $path]);
+
+            // JSON-Antwort für AJAX
+            if ($request->headers->get('X-Requested-With') === 'XMLHttpRequest' || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Screenshot erfolgreich hochgeladen.',
+                    'path' => $path,
+                ]);
+            }
+
+            return redirect()->back()
+                ->with('success', 'Screenshot erfolgreich hochgeladen.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validierungsfehler beim Screenshot-Upload', [
+                'errors' => $e->errors(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validierungsfehler',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Fehler beim Screenshot-Upload', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Fehler beim Hochladen: ' . $e->getMessage(),
+            ], 500);
         }
+    }
 
-        $step->update([
-            'screenshot_path' => $path,
+    // Screenshot für Guide-Schritt hochladen
+    public function storeGuideScreenshot(Request $request, Guide $guide)
+    {
+        \Log::info('storeGuideScreenshot aufgerufen', [
+            'guide_id' => $guide->id,
+            'step_id' => $request->input('step_id'),
+            'has_file' => $request->hasFile('screenshot'),
+            'file_name' => $request->file('screenshot')?->getClientOriginalName() ?? 'keine',
+            'file_size' => $request->file('screenshot')?->getSize() ?? 0,
+            'file_type' => $request->file('screenshot')?->getMimeType() ?? 'keine',
         ]);
 
-        return redirect()->back()
-            ->with('success', 'Screenshot erfolgreich hochgeladen.');
+        try {
+            $validated = $request->validate([
+                'step_id' => 'required|exists:guide_steps,id',
+                'screenshot' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            ]);
+
+            \Log::info('Validierung erfolgreich', ['step_id' => $validated['step_id']]);
+
+            $path = $this->compressAndStore($request->file('screenshot'), 'guides/' . $guide->id);
+            \Log::info('Bild gespeichert', ['path' => $path]);
+
+            $sortOrder = GuideImage::where('guide_id', $guide->id)->where('guide_step_id', $validated['step_id'])->max('sort_order') + 1;
+
+            $image = GuideImage::create([
+                'guide_id' => $guide->id,
+                'guide_step_id' => $validated['step_id'],
+                'path' => $path,
+                'filename' => pathinfo($path, PATHINFO_FILENAME),
+                'caption' => 'Screenshot',
+                'alt_text' => null,
+                'sort_order' => $sortOrder,
+            ]);
+            \Log::info('GuideImage erstellt', ['id' => $image->id, 'path' => $path]);
+
+            // JSON-Antwort für AJAX
+            if ($request->headers->get('X-Requested-With') === 'XMLHttpRequest' || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Screenshot erfolgreich hochgeladen.',
+                    'path' => $path,
+                ]);
+            }
+
+            return redirect()->back()
+                ->with('success', 'Screenshot erfolgreich hochgeladen.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validierungsfehler beim Guide-Screenshot-Upload', [
+                'errors' => $e->errors(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validierungsfehler',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Fehler beim Guide-Screenshot-Upload', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Fehler beim Hochladen: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     // Bild löschen
@@ -164,14 +277,32 @@ class AdminImageController extends Controller
     }
 
     // Screenshot von Tutorial-Schritt löschen
-    public function destroyTutorialScreenshot(Tutorial $tutorial, TutorialStep $step)
+    public function destroyTutorialScreenshot(Tutorial $tutorial, $step)
     {
-        if ($step->screenshot_path) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($step->screenshot_path);
-            $step->update(['screenshot_path' => null]);
-        }
+        try {
+            $stepModel = TutorialStep::findOrFail($step);
+            
+            \Log::info('destroyTutorialScreenshot aufgerufen', [
+                'tutorial_id' => $tutorial->id,
+                'step_id' => $stepModel->id,
+                'screenshot_path' => $stepModel->screenshot_path,
+            ]);
 
-        return redirect()->back()
-            ->with('success', 'Screenshot erfolgreich gelöscht.');
+            if ($stepModel->screenshot_path) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($stepModel->screenshot_path);
+                $stepModel->update(['screenshot_path' => null]);
+                \Log::info('Screenshot gelöscht', ['path' => $stepModel->screenshot_path]);
+            }
+
+            return redirect()->back()
+                ->with('success', 'Screenshot erfolgreich gelöscht.');
+        } catch (\Exception $e) {
+            \Log::error('Fehler beim Löschen des Screenshots', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return redirect()->back()
+                ->with('error', 'Fehler beim Löschen des Screenshots: ' . $e->getMessage());
+        }
     }
 }

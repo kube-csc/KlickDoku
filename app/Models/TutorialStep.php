@@ -14,6 +14,14 @@ class TutorialStep extends Model
 
     protected $casts = [
         'auto_advance' => 'boolean',
+        'screenshot_width' => 'integer',
+        'screenshot_height' => 'integer',
+    ];
+
+    protected $attributes = [
+        'screenshot_path' => null,
+        'screenshot_width' => null,
+        'screenshot_height' => null,
     ];
 
     public function tutorial()
