@@ -152,6 +152,9 @@ document.addEventListener('click', function(e) {
             <input type="text" name="steps[${stepIndex}][hotspots][${hotspotCount}][label]" 
                    placeholder="Label" required
                    class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
+            <input type="text" name="steps[${stepIndex}][hotspots][${hotspotCount}][link]" 
+                   placeholder="Link (optional)"
+                   class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
             <button type="button" class="remove-hotspot text-red-500 hover:text-red-700 text-sm">✕</button>
         </div>`;
         

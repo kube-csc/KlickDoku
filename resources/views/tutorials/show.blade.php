@@ -105,6 +105,7 @@
                          data-hotspot-id="{{ $hotspot->id }}"
                          data-clickable="{{ $hotspot->is_clickable ? '1' : '0' }}"
                          data-label="{{ $hotspot->label ?? '' }}"
+                         data-link="{{ $hotspot->link ?? '' }}"
                          style="
                             position: absolute;
                             left: {{ $hotspot->position_x }}%;
@@ -174,6 +175,7 @@
         @endif
 
         <!-- Tipp / Warnung -->
+        <div id="tip-warning-container">
         @if($currentStep)
             @if($currentStep->tip)
                 <div class="mx-6 mt-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r">
@@ -190,6 +192,7 @@
                 </div>
             @endif
         @endif
+        </div>
 
         <!-- Navigation -->
         <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
@@ -203,7 +206,7 @@
                 {{ __('common.previous') }}
             </button>
 
-            <span class="text-sm text-gray-500">
+            <span class="text-sm text-gray-500 step-counter-text">
                 {{ __('common.step') }} {{ $currentStepNumber }} / {{ $tutorial->steps->count() }}
             </span>
 
@@ -232,20 +235,21 @@
     <!-- Schritt-Übersicht (Sidebar) -->
     <div class="mt-6 bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ __('common.steps_overview') }}</h3>
-        <div class="space-y-2">
+        <div class="space-y-2" id="steps-overview-list">
             @foreach($tutorial->steps as $step)
                 <button onclick="goToStep({{ $step->step_number }})"
-                        class="w-full flex items-center px-4 py-3 rounded-md text-left transition-colors
+                        data-step="{{ $step->step_number }}"
+                        class="step-overview-btn w-full flex items-center px-4 py-3 rounded-md text-left transition-colors
                                {{ $step->step_number === $currentStepNumber
                                    ? 'bg-purple-50 text-purple-700 border-l-4 border-purple-500'
                                    : 'hover:bg-gray-50 text-gray-700 border-l-4 border-transparent' }}">
-                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full
+                    <span class="step-number-badge flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full
                                  {{ $step->step_number === $currentStepNumber
                                      ? 'bg-purple-500 text-white'
                                      : 'bg-gray-200 text-gray-600' }}">
                         {{ $step->step_number }}
                     </span>
-                    <span class="ml-3 text-sm font-medium">{{ $step->title }}</span>
+                    <span class="ml-3 text-sm font-medium step-title-text">{{ $step->title }}</span>
                     @if($step->hotspots->count() > 0)
                         <span class="ml-auto text-xs text-gray-400">
                             {{ $step->hotspots->count() }} {{ __('common.hotspots') }}
@@ -284,6 +288,16 @@
 
     let currentStepIndex = {{ $currentStepNumber - 1 }};
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+    // Klick-Handler für PHP-generierte Hotspots (erster Schritt beim Laden)
+    document.querySelectorAll('.tutorial-hotspot[data-link]').forEach(el => {
+        el.addEventListener('click', function() {
+            const link = this.dataset.link;
+            if (link) {
+                window.open(link, '_blank');
+            }
+        });
+    });
 
     function renderStep(index) {
         const step = steps[index];
@@ -369,9 +383,20 @@
                 ` : ''}
             `;
 
-            // Klick-Handler für klickbare Hotspots
-            if (hotspot.is_clickable) {
+            // Link-Attribute setzen
+            if (hotspot.link) {
+                div.dataset.link = hotspot.link;
+                div.style.cursor = 'pointer';
+            }
+
+            // Klick-Handler: Hotspots mit Link sind immer klickbar
+            if (hotspot.is_clickable || hotspot.link) {
                 div.addEventListener('click', function() {
+                    // Wenn Link vorhanden, dorthin navigieren (in neuem Tab)
+                    if (hotspot.link) {
+                        window.open(hotspot.link, '_blank');
+                        return;
+                    }
                     if (!div.classList.contains('hotspot-clicked')) {
                         div.classList.add('hotspot-clicked');
                         // Fortschritt speichern
@@ -404,19 +429,51 @@
         }
 
         // Schritt-Übersicht aktualisieren
-        document.querySelectorAll('.steps-overview button').forEach((btn, i) => {
+        const overviewBtns = document.querySelectorAll('.step-overview-btn');
+        overviewBtns.forEach((btn, i) => {
+            const badge = btn.querySelector('.step-number-badge');
             if (i === index) {
                 btn.className = btn.className.replace('hover:bg-gray-50 text-gray-700 border-l-4 border-transparent',
                     'bg-purple-50 text-purple-700 border-l-4 border-purple-500');
-                btn.querySelector('span:first-child').className =
-                    'flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-purple-500 text-white';
+                if (badge) {
+                    badge.className = badge.className.replace('bg-gray-200 text-gray-600', 'bg-purple-500 text-white');
+                }
             } else {
                 btn.className = btn.className.replace('bg-purple-50 text-purple-700 border-l-4 border-purple-500',
                     'hover:bg-gray-50 text-gray-700 border-l-4 border-transparent');
-                btn.querySelector('span:first-child').className =
-                    'flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 text-gray-600';
+                if (badge) {
+                    badge.className = badge.className.replace('bg-purple-500 text-white', 'bg-gray-200 text-gray-600');
+                }
             }
         });
+
+        // Schritt-Zähler in der Navigation aktualisieren
+        const stepCounter = document.querySelector('.step-counter-text');
+        if (stepCounter) {
+            stepCounter.textContent = '{{ __('common.step') }} ' + (index + 1) + ' / ' + steps.length;
+        }
+
+        // Tipp/Warning-Bereich aktualisieren
+        const tipEl = document.getElementById('tip-warning-container');
+        if (tipEl) {
+            tipEl.innerHTML = '';
+            if (step.tip) {
+                tipEl.innerHTML += `
+                    <div class="mx-6 mt-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r">
+                        <p class="text-sm text-yellow-800">
+                            <strong>💡 {{ __('common.tip') }}:</strong> ${step.tip}
+                        </p>
+                    </div>`;
+            }
+            if (step.warning) {
+                tipEl.innerHTML += `
+                    <div class="mx-6 mt-4 p-4 bg-red-50 border-l-4 border-red-400 rounded-r">
+                        <p class="text-sm text-red-800">
+                            <strong>⚠️ {{ __('common.warning') }}:</strong> ${step.warning}
+                        </p>
+                    </div>`;
+            }
+        }
 
         // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });

@@ -45,8 +45,15 @@ class AdminTutorialController extends Controller
             'steps.*.title' => 'required_with:steps|string|max:255',
             'steps.*.instruction' => 'required_with:steps|string',
             'steps.*.hotspots' => 'nullable|array',
-            'steps.*.hotspots.*.selector' => 'required_with:steps.*.hotspots|string',
-            'steps.*.hotspots.*.label' => 'required_with:steps.*.hotspots|string',
+            'steps.*.hotspots.*.selector' => 'nullable|string',
+            'steps.*.hotspots.*.label' => 'nullable|string',
+            'steps.*.hotspots.*.link' => 'nullable|string|max:255|sometimes',
+            'steps.*.hotspots.*.hotspot_type' => 'nullable|string|sometimes',
+            'steps.*.hotspots.*.position_x' => 'nullable|integer|sometimes',
+            'steps.*.hotspots.*.position_y' => 'nullable|integer|sometimes',
+            'steps.*.screenshot_path' => 'nullable|string|max:255|sometimes',
+            'steps.*.screenshot_width' => 'nullable|integer|sometimes',
+            'steps.*.screenshot_height' => 'nullable|integer|sometimes',
         ]);
 
         $tutorial = Tutorial::create([
@@ -74,6 +81,9 @@ class AdminTutorialController extends Controller
                     'step_number' => $index + 1,
                     'title' => $step['title'],
                     'instruction' => $step['instruction'],
+                    'screenshot_path' => $step['screenshot_path'] ?? '',
+                    'screenshot_width' => $step['screenshot_width'] ?? 0,
+                    'screenshot_height' => $step['screenshot_height'] ?? 0,
                 ]);
 
                 // Hotspots erstellen
@@ -83,6 +93,10 @@ class AdminTutorialController extends Controller
                             'tutorial_step_id' => $tutorialStep->id,
                             'selector' => $hotspot['selector'],
                             'label' => $hotspot['label'],
+                            'link' => !empty($hotspot['link']) ? $hotspot['link'] : null,
+                            'hotspot_type' => $hotspot['hotspot_type'] ?? 'click',
+                            'position_x' => $hotspot['position_x'] ?? 0,
+                            'position_y' => $hotspot['position_y'] ?? 0,
                         ]);
                     }
                 }
@@ -119,8 +133,15 @@ class AdminTutorialController extends Controller
             'steps.*.title' => 'required_with:steps|string|max:255',
             'steps.*.instruction' => 'required_with:steps|string',
             'steps.*.hotspots' => 'nullable|array',
-            'steps.*.hotspots.*.selector' => 'required_with:steps.*.hotspots|string',
-            'steps.*.hotspots.*.label' => 'required_with:steps.*.hotspots|string',
+            'steps.*.hotspots.*.selector' => 'nullable|string',
+            'steps.*.hotspots.*.label' => 'nullable|string',
+            'steps.*.hotspots.*.link' => 'nullable|string|max:255|sometimes',
+            'steps.*.hotspots.*.hotspot_type' => 'nullable|string|sometimes',
+            'steps.*.hotspots.*.position_x' => 'nullable|integer|sometimes',
+            'steps.*.hotspots.*.position_y' => 'nullable|integer|sometimes',
+            'steps.*.screenshot_path' => 'nullable|string|max:255|sometimes',
+            'steps.*.screenshot_width' => 'nullable|integer|sometimes',
+            'steps.*.screenshot_height' => 'nullable|integer|sometimes',
         ]);
 
         $tutorial->update([
@@ -150,6 +171,9 @@ class AdminTutorialController extends Controller
                     'step_number' => $index + 1,
                     'title' => $step['title'],
                     'instruction' => $step['instruction'],
+                    'screenshot_path' => $step['screenshot_path'] ?? '',
+                    'screenshot_width' => $step['screenshot_width'] ?? 0,
+                    'screenshot_height' => $step['screenshot_height'] ?? 0,
                 ]);
 
                 // Hotspots erstellen
@@ -159,6 +183,10 @@ class AdminTutorialController extends Controller
                             'tutorial_step_id' => $tutorialStep->id,
                             'selector' => $hotspot['selector'],
                             'label' => $hotspot['label'],
+                            'link' => !empty($hotspot['link']) ? $hotspot['link'] : null,
+                            'hotspot_type' => $hotspot['hotspot_type'] ?? 'click',
+                            'position_x' => $hotspot['position_x'] ?? 0,
+                            'position_y' => $hotspot['position_y'] ?? 0,
                         ]);
                     }
                 }
