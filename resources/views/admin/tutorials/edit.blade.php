@@ -137,12 +137,15 @@
                                     <p class="text-sm text-gray-600 mb-2">Aktueller Screenshot:</p>
                                     <div class="relative inline-block">
                                         <img src="{{ asset('storage/' . $step->screenshot_path) }}" 
-                                             alt="Screenshot" loading="lazy" class="w-64 h-auto rounded-lg border">
+                                             alt="Screenshot" loading="lazy" class="w-64 h-auto rounded-lg border cursor-pointer"
+                                             onclick="openHotspotEditor('{{ asset('storage/' . $step->screenshot_path) }}', {{ $step->screenshot_width ?? '0' }}, {{ $step->screenshot_height ?? '0' }}, '{{ $index }}', '{{ $hIndex ?? -1 }}')"
+                                             title="Klicken zum Vergrößern und Hotspot-Position setzen">
                                         <button type="button" onclick="confirmDeleteScreenshot({{ $tutorial->id }}, {{ $step->id }})"
                                                 class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600">
                                             ✕
                                         </button>
                                     </div>
+                                    <p class="text-xs text-gray-400 mt-1">🔍 Auf das Bild klicken, um Hotspot-Positionen visuell zu setzen</p>
                                 </div>
                             @endif
                             <div class="flex gap-2 items-end">
@@ -163,7 +166,7 @@
                             </div>
                             <div class="hotspots-container" data-step="{{ $index }}">
                                 @foreach($step->hotspots as $hIndex => $hotspot)
-                                <div class="hotspot-item flex gap-2 mb-2">
+                                <div class="hotspot-item flex gap-2 mb-2 items-center">
                                     <input type="hidden" name="steps[{{ $index }}][hotspots][{{ $hIndex }}][hotspot_type]" value="{{ old("steps.$index.hotspots.$hIndex.hotspot_type", $hotspot->hotspot_type) }}">
                                     <input type="hidden" name="steps[{{ $index }}][hotspots][{{ $hIndex }}][position_x]" value="{{ old("steps.$index.hotspots.$hIndex.position_x", $hotspot->position_x) }}">
                                     <input type="hidden" name="steps[{{ $index }}][hotspots][{{ $hIndex }}][position_y]" value="{{ old("steps.$index.hotspots.$hIndex.position_y", $hotspot->position_y) }}">
@@ -173,12 +176,21 @@
                                            class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
                                     <input type="text" name="steps[{{ $index }}][hotspots][{{ $hIndex }}][label]" 
                                            value="{{ old("steps.$index.hotspots.$hIndex.label", $hotspot->label) }}"
-                                           placeholder="Label" required
+                                           placeholder="Label"
                                            class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
                                     <input type="text" name="steps[{{ $index }}][hotspots][{{ $hIndex }}][link]" 
                                            value="{{ old("steps.$index.hotspots.$hIndex.link", $hotspot->link) }}"
                                            placeholder="Link (optional)"
                                            class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
+                                    <span class="hotspot-pos-display text-xs text-gray-500 whitespace-nowrap" data-hotspot="{{ $hIndex }}">
+                                        {{ $hotspot->position_x ?? '-' }}%, {{ $hotspot->position_y ?? '-' }}%
+                                    </span>
+                                    @if($step->screenshot_path)
+                                    <button type="button" onclick="openHotspotEditor('{{ asset('storage/' . $step->screenshot_path) }}', {{ $step->screenshot_width ?? '0' }}, {{ $step->screenshot_height ?? '0' }}, '{{ $index }}', '{{ $hIndex }}')"
+                                            class="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 whitespace-nowrap" title="Position auf dem Bild setzen">
+                                        📍 Position
+                                    </button>
+                                    @endif
                                     <button type="button" class="remove-hotspot text-red-500 hover:text-red-700 text-sm">✕</button>
                                 </div>
                                 @endforeach
@@ -257,8 +269,48 @@
     </div>
 </form>
 
+<!-- Hotspot-Editor Modal -->
+<div id="hotspotEditorModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeHotspotEditor()">
+    <div class="bg-white rounded-lg shadow-xl max-w-7xl max-h-full overflow-auto">
+        <div class="flex justify-between items-center p-4 border-b">
+            <h3 class="text-lg font-medium text-gray-900">Hotspot-Position auf dem Bild setzen</h3>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="zoomHotspotImage(-0.1)" class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm" title="Verkleinern">➖</button>
+                <span id="zoomLevel" class="text-sm text-gray-600">100%</span>
+                <button type="button" onclick="zoomHotspotImage(0.1)" class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm" title="Vergrößern">➕</button>
+                <button type="button" onclick="closeHotspotEditor()" class="ml-2 text-red-500 hover:text-red-700 text-lg">✕</button>
+            </div>
+        </div>
+        <div class="p-4">
+            <!-- Deutliche Anleitung mit Animation -->
+            <div id="hotspotHint" class="mb-3 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+                <p class="text-base font-bold text-yellow-800 mb-1">📍 So verschieben Sie die Hotspot-Position:</p>
+                <ol class="list-decimal list-inside text-sm text-yellow-700 space-y-1">
+                    <li>Klicken Sie auf den <span class="font-bold">📍 Position</span> Button beim Hotspot, den Sie ändern möchten.</li>
+                    <li>Klicken Sie dann <span class="font-bold">direkt auf das Bild</span> an der Stelle, wo der Hotspot erscheinen soll.</li>
+                    <li>Die Position wird sofort gespeichert. Sie können den Zoom (➕/➖) für mehr Genauigkeit verwenden.</li>
+                </ol>
+            </div>
+            <div id="hotspotImageContainer" class="relative inline-block overflow-auto max-h-[70vh]">
+                <div id="hotspotImageWrapper" class="inline-block relative" style="transform-origin: top left;">
+                    <img id="hotspotEditorImage" src="" alt="Screenshot" class="block cursor-crosshair" onwheel="handleZoom(event)" />
+                    <!-- Hotspot Marker werden hier dynamisch hinzugefügt -->
+                    <div id="hotspotMarkers" class="absolute inset-0 pointer-events-none"></div>
+                </div>
+            </div>
+            <div class="mt-3 p-3 bg-blue-50 rounded-lg">
+                <p class="text-sm font-medium text-blue-800">Ausgewählte Position:</p>
+                <p id="selectedPosition" class="text-sm text-blue-600">Noch keine Position ausgewählt</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 let stepCount = {{ $tutorial->steps->count() }};
+let currentHotspotStepIndex = null;
+let currentHotspotIndex = null;
+let hotspotEditorZoom = 1.0;
 
 document.getElementById('addStep').addEventListener('click', function() {
     const stepHtml = `
@@ -309,17 +361,27 @@ document.addEventListener('click', function(e) {
         const hotspotsContainer = step.querySelector('.hotspots-container');
         const hotspotCount = hotspotsContainer.children.length;
         
+        // Screenshot-URL aus dem Schritt holen (falls vorhanden)
+        const screenshotPath = step.querySelector('input[name$="[screenshot_path]"]');
+        const hasScreenshot = screenshotPath && screenshotPath.value;
+        
         const hotspotHtml = `
-        <div class="hotspot-item flex gap-2 mb-2">
+        <div class="hotspot-item flex gap-2 mb-2 items-center">
+            <input type="hidden" name="steps[${stepIndex}][hotspots][${hotspotCount}][hotspot_type]" value="circle">
+            <input type="hidden" name="steps[${stepIndex}][hotspots][${hotspotCount}][position_x]" value="">
+            <input type="hidden" name="steps[${stepIndex}][hotspots][${hotspotCount}][position_y]" value="">
             <input type="text" name="steps[${stepIndex}][hotspots][${hotspotCount}][selector]" 
-                   placeholder="CSS-Selector (z.B. #button)" required
+                   placeholder="CSS-Selector (z.B. #button)"
                    class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
             <input type="text" name="steps[${stepIndex}][hotspots][${hotspotCount}][label]" 
-                   placeholder="Label" required
+                   placeholder="Label"
                    class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
             <input type="text" name="steps[${stepIndex}][hotspots][${hotspotCount}][link]" 
                    placeholder="Link (optional)"
                    class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
+            <span class="hotspot-pos-display text-xs text-gray-500 whitespace-nowrap" data-hotspot="${hotspotCount}">-</span>
+            ${hasScreenshot ? `<button type="button" onclick="openHotspotEditor('', 0, 0, '${stepIndex}', '${hotspotCount}')"
+                    class="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 whitespace-nowrap" title="Position auf dem Bild setzen">📍 Position</button>` : ''}
             <button type="button" class="remove-hotspot text-red-500 hover:text-red-700 text-sm">✕</button>
         </div>`;
         
@@ -407,6 +469,228 @@ function deleteStepTranslation(tutorialId, stepId, locale) {
             }
         });
     }
+}
+
+/* ===== Hotspot-Editor Funktionen ===== */
+
+function openHotspotEditor(imageSrc, imageWidth, imageHeight, stepIndex, hotspotIndex) {
+    const modal = document.getElementById('hotspotEditorModal');
+    const img = document.getElementById('hotspotEditorImage');
+    const wrapper = document.getElementById('hotspotImageWrapper');
+    
+    // Wenn keine Bild-URL übergeben, aus dem Schritt ermitteln
+    if (!imageSrc) {
+        const stepItem = document.querySelector(`.step-item[data-step="${stepIndex}"]`);
+        if (stepItem) {
+            const screenshotImg = stepItem.querySelector('img[onclick*="openHotspotEditor"]');
+            if (screenshotImg) {
+                imageSrc = screenshotImg.src;
+            }
+        }
+    }
+    
+    // Wenn immer noch kein Bild, Modal schließen
+    if (!imageSrc) {
+        alert('Kein Screenshot vorhanden. Laden Sie zuerst einen Screenshot hoch.');
+        return;
+    }
+    
+    // Bild laden
+    img.src = imageSrc;
+    hotspotEditorZoom = 1.0;
+    wrapper.style.transform = 'scale(1)';
+    document.getElementById('zoomLevel').textContent = '100%';
+    
+    // Schritt- und Hotspot-Index speichern
+    currentHotspotStepIndex = stepIndex;
+    currentHotspotIndex = hotspotIndex;
+    
+    // Modal anzeigen
+    modal.classList.remove('hidden');
+    
+    // Ausgewählte Position zurücksetzen
+    document.getElementById('selectedPosition').textContent = 'Noch keine Position ausgewählt';
+    
+    // Bild-Größe laden und Marker rendern nach dem Laden
+    img.onload = function() {
+        renderHotspotMarkers(stepIndex);
+    };
+    // Falls bereits gecacht
+    if (img.complete) {
+        renderHotspotMarkers(stepIndex);
+    }
+}
+
+function closeHotspotEditor() {
+    document.getElementById('hotspotEditorModal').classList.add('hidden');
+    currentHotspotStepIndex = null;
+    currentHotspotIndex = null;
+}
+
+function setHotspotPosition(event) {
+    event.stopPropagation();
+    event.preventDefault();
+    
+    const img = document.getElementById('hotspotEditorImage');
+    const wrapper = document.getElementById('hotspotImageWrapper');
+    
+    // Zoom-Faktor aus dem CSS transform: scale(X) des Wrappers extrahieren
+    let zoom = 1;
+    if (wrapper) {
+        const transform = window.getComputedStyle(wrapper).transform;
+        const match = transform.match(/matrix\(([^)]+)\)/);
+        if (match) {
+            // matrix(a, b, c, d, tx, ty) - a und d sind der Skalierungsfaktor
+            zoom = parseFloat(match[1].split(',')[0]);
+        }
+    }
+    
+    // Klick-Position relativ zum Bild berechnen
+    // Bei Zoom muss die Klick-Position durch den Zoom-Faktor geteilt werden,
+    // um die Position in der natürlichen Bildgröße zu erhalten
+    const naturalWidth = img.naturalWidth;
+    const naturalHeight = img.naturalHeight;
+    
+    // rect ist die sichtbare (gezoomte) Größe des Bildes
+    const rect = img.getBoundingClientRect();
+    
+    // Klick-Position in Pixeln des sichtbaren (gezoomten) Bildes
+    const clickXVisible = event.clientX - rect.left;
+    const clickYVisible = event.clientY - rect.top;
+    
+    // Durch Zoom-Faktor teilen, um die Position in der natürlichen Bildgröße zu erhalten
+    const clickX = clickXVisible / zoom;
+    const clickY = clickYVisible / zoom;
+    
+    // Prozentwerte basierend auf der natürlichen Bildgröße berechnen
+    const x = (clickX / naturalWidth) * 100;
+    const y = (clickY / naturalHeight) * 100;
+    
+    // Auf Ganzzahl runden (Datenbank speichert integer)
+    const posX = Math.round(x);
+    const posY = Math.round(y);
+    
+    // Position im Formular setzen
+    const stepItem = document.querySelector(`.step-item[data-step="${currentHotspotStepIndex}"]`);
+    if (!stepItem) {
+        console.error('Schritt nicht gefunden:', currentHotspotStepIndex);
+        return;
+    }
+    
+    // Wenn kein Hotspot ausgewählt ist, einen neuen erstellen
+    if (currentHotspotIndex === null || currentHotspotIndex === '-1') {
+        // Neuen Hotspot hinzufügen
+        const hotspotsContainer = stepItem.querySelector('.hotspots-container');
+        const hotspotCount = hotspotsContainer.querySelectorAll('.hotspot-item').length;
+        
+        const hotspotHtml = `
+        <div class="hotspot-item flex gap-2 mb-2 items-center">
+            <input type="hidden" name="steps[${currentHotspotStepIndex}][hotspots][${hotspotCount}][hotspot_type]" value="circle">
+            <input type="hidden" name="steps[${currentHotspotStepIndex}][hotspots][${hotspotCount}][position_x]" value="${posX}">
+            <input type="hidden" name="steps[${currentHotspotStepIndex}][hotspots][${hotspotCount}][position_y]" value="${posY}">
+            <input type="text" name="steps[${currentHotspotStepIndex}][hotspots][${hotspotCount}][selector]" 
+                   placeholder="CSS-Selector (z.B. #button)"
+                   class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
+            <input type="text" name="steps[${currentHotspotStepIndex}][hotspots][${hotspotCount}][label]" 
+                   placeholder="Label"
+                   class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
+            <input type="text" name="steps[${currentHotspotStepIndex}][hotspots][${hotspotCount}][link]" 
+                   placeholder="Link (optional)"
+                   class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
+            <span class="hotspot-pos-display text-xs text-gray-500 whitespace-nowrap" data-hotspot="${hotspotCount}">${posX}%, ${posY}%</span>
+            <button type="button" class="remove-hotspot text-red-500 hover:text-red-700 text-sm">✕</button>
+        </div>`;
+        
+        hotspotsContainer.insertAdjacentHTML('beforeend', hotspotHtml);
+    } else {
+        // Bestehenden Hotspot aktualisieren
+        const posXInput = stepItem.querySelector(`input[name="steps[${currentHotspotStepIndex}][hotspots][${currentHotspotIndex}][position_x]"]`);
+        const posYInput = stepItem.querySelector(`input[name="steps[${currentHotspotStepIndex}][hotspots][${currentHotspotIndex}][position_y]"]`);
+        
+        if (posXInput) posXInput.value = posX;
+        if (posYInput) posYInput.value = posY;
+        
+        // Positionsanzeige aktualisieren
+        const posDisplay = stepItem.querySelector(`.hotspot-pos-display[data-hotspot="${currentHotspotIndex}"]`);
+        if (posDisplay) posDisplay.textContent = `${posX}%, ${posY}%`;
+    }
+    
+    // Ausgewählte Position anzeigen
+    document.getElementById('selectedPosition').textContent = `X: ${posX}%, Y: ${posY}% — Position wurde im Formular gespeichert`;
+    
+    // Hinweis ausblenden nach erfolgreichem Klick
+    const hint = document.getElementById('hotspotHint');
+    if (hint) hint.classList.add('hidden');
+    
+    // Marker neu rendern
+    renderHotspotMarkers(currentHotspotStepIndex);
+}
+
+function renderHotspotMarkers(stepIndex) {
+    const markersContainer = document.getElementById('hotspotMarkers');
+    markersContainer.innerHTML = '';
+    
+    const stepItem = document.querySelector(`.step-item[data-step="${stepIndex}"]`);
+    if (!stepItem) return;
+    
+    const hotspotItems = stepItem.querySelectorAll('.hotspot-item');
+    hotspotItems.forEach((item, hIndex) => {
+        const posXInput = item.querySelector('input[name$="[position_x]"]');
+        const posYInput = item.querySelector('input[name$="[position_y]"]');
+        
+        if (posXInput && posYInput && posXInput.value && posYInput.value) {
+            const marker = document.createElement('div');
+            marker.className = 'absolute w-6 h-6 -ml-3 -mt-3 rounded-full bg-red-500 border-2 border-white shadow pointer-events-auto cursor-pointer hover:bg-red-600';
+            marker.style.left = posXInput.value + '%';
+            marker.style.top = posYInput.value + '%';
+            marker.title = `Hotspot ${hIndex + 1} (${posXInput.value}%, ${posYInput.value}%)`;
+            marker.onclick = function(e) {
+                e.stopPropagation();
+                currentHotspotIndex = hIndex;
+            };
+            markersContainer.appendChild(marker);
+        }
+    });
+}
+
+function zoomHotspotImage(delta) {
+    hotspotEditorZoom = Math.max(0.1, Math.min(5.0, hotspotEditorZoom + delta));
+    const wrapper = document.getElementById('hotspotImageWrapper');
+    wrapper.style.transform = `scale(${hotspotEditorZoom})`;
+    document.getElementById('zoomLevel').textContent = Math.round(hotspotEditorZoom * 100) + '%';
+}
+
+function handleZoom(event) {
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? -0.1 : 0.1;
+    zoomHotspotImage(delta);
+}
+
+// ESC-Taste schließt Modal
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeHotspotEditor();
+    }
+});
+
+// Klick-Handler für das Bild im Hotspot-Editor (am Container, fängt alle Klicks ab)
+const hotspotContainer = document.getElementById('hotspotImageContainer');
+if (hotspotContainer) {
+    hotspotContainer.addEventListener('click', function(event) {
+        // Nur verarbeiten, wenn das Modal sichtbar ist
+        const modal = document.getElementById('hotspotEditorModal');
+        if (modal.classList.contains('hidden')) return;
+        
+        const target = event.target;
+        
+        // Wenn auf den roten Marker geklickt wurde, nur auswählen, nicht Position setzen
+        if (target.classList && target.classList.contains('rounded-full') && target.classList.contains('bg-red-500')) {
+            return;
+        }
+        
+        // Alle anderen Klicks im Bild-Bereich: Position setzen
+        setHotspotPosition(event);
+    });
 }
 </script>
 @endsection

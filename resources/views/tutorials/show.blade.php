@@ -131,13 +131,21 @@
                                 top: 50%;
                                 left: 50%;
                                 transform: translate(-50%, -50%);
-                                width: 16px;
-                                height: 16px;
+                                width: 28px;
+                                height: 28px;
                                 border-radius: 50%;
-                                background: #9333ea;
+                                background: {{ $hotspot->link ? '#2563eb' : '#9333ea' }};
                                 border: 2px solid white;
                                 box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                             "></div>
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 14px;
+                             ">
+                            @if($hotspot->link)
+                                🔗
+                            @endif
+                        </div>
                         <!-- Label -->
                         @if($hotspot->label)
                             <div class="hotspot-label"
@@ -367,10 +375,12 @@
                 <div class="hotspot-core" style="
                     position: absolute; top: 50%; left: 50%;
                     transform: translate(-50%, -50%);
-                    width: 16px; height: 16px; border-radius: 50%;
-                    background: #9333ea; border: 2px solid white;
+                    width: 28px; height: 28px; border-radius: 50%;
+                    background: ${hotspot.link ? '#2563eb' : '#9333ea'}; border: 2px solid white;
                     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                "></div>
+                    display: flex; align-items: center; justify-content: center;
+                    font-size: 14px;
+                ">${hotspot.link ? '🔗' : ''}</div>
                 ${hotspot.label ? `
                 <div class="hotspot-label" style="
                     position: absolute; bottom: 100%; left: 50%;
