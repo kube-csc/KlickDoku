@@ -110,6 +110,7 @@ class AdminGuideController extends Controller
             'meta_description' => 'nullable|string',
             'og_image' => 'nullable|string|max:255',
             'steps' => 'nullable|array',
+            'steps.*.id' => 'nullable|integer',
             'steps.*.title' => 'required_with:steps|string|max:255',
             'steps.*.description' => 'required_with:steps|string',
             'steps.*.tip' => 'nullable|string',
@@ -135,18 +136,51 @@ class AdminGuideController extends Controller
             $guide->tags()->detach();
         }
 
-        // Schritte aktualisieren
+        // Schritte aktualisieren (bestehende Schritte updaten, neue erstellen, gelöschte entfernen)
         if (!empty($validated['steps'])) {
-            $guide->steps()->delete();
-            foreach ($validated['steps'] as $index => $step) {
-                GuideStep::create([
-                    'guide_id' => $guide->id,
-                    'step_number' => $index + 1,
-                    'title' => $step['title'],
-                    'description' => $step['description'],
-                    'tip' => $step['tip'] ?? null,
-                    'warning' => $step['warning'] ?? null,
-                ]);
+            // Alle bestehenden Schritt-IDs VOR dem Update speichern
+            $existingStepIds = GuideStep::where('guide_id', $guide->id)->pluck('id')->toArray();
+            
+            $keptStepIds = [];
+            foreach ($validated['steps'] as $index => $stepData) {
+                $stepNumber = $index + 1;
+                
+                // Wenn eine ID vorhanden ist, bestehenden Schritt aktualisieren
+                if (!empty($stepData['id'])) {
+                    $existingStep = GuideStep::where('guide_id', $guide->id)
+                        ->where('id', $stepData['id'])
+                        ->first();
+                    
+                    if ($existingStep) {
+                        $existingStep->update([
+                            'step_number' => $stepNumber,
+                            'title' => $stepData['title'],
+                            'description' => $stepData['description'],
+                            'tip' => $stepData['tip'] ?? null,
+                            'warning' => $stepData['warning'] ?? null,
+                        ]);
+                        $keptStepIds[] = (int) $stepData['id'];
+                    }
+                } else {
+                    // Neuer Schritt (ohne ID) erstellen
+                    $newStep = GuideStep::create([
+                        'guide_id' => $guide->id,
+                        'step_number' => $stepNumber,
+                        'title' => $stepData['title'],
+                        'description' => $stepData['description'],
+                        'tip' => $stepData['tip'] ?? null,
+                        'warning' => $stepData['warning'] ?? null,
+                    ]);
+                    // Neue Schritt-ID zur Liste der zu behaltenden IDs hinzufügen
+                    $keptStepIds[] = $newStep->id;
+                }
+            }
+            
+            // Nur bestehende Schritte löschen, die nicht mehr im Formular sind
+            // (neue Schritte nicht löschen!)
+            $stepsToDelete = array_diff($existingStepIds, $keptStepIds);
+            if (!empty($stepsToDelete)) {
+                $guide->steps()->whereIn('id', $stepsToDelete)->delete();
             }
         }
 

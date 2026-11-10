@@ -67,7 +67,7 @@ class GuideController extends Controller
             // View-Count erhöhen
             $guide->increment('view_count');
 
-            $guide->load(['category', 'category.translations', 'author', 'steps.images', 'steps.stepTranslations', 'tags', 'translations']);
+            $guide->load(['category', 'category.translations', 'author', 'steps.images', 'steps.stepTranslations', 'tags', 'translations', 'images']);
 
             // Nur genehmigte Kommentare laden
             $comments = $guide->comments()

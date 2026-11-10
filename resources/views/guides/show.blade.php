@@ -77,6 +77,26 @@
             </div>
         @endif
 
+        <!-- Globale Bilder der Anleitung -->
+        @php
+            $globalImages = $guide->images->whereNull('guide_step_id');
+        @endphp
+        @if($globalImages->count() > 0)
+            <div class="mt-6 space-y-3">
+                @foreach($globalImages as $image)
+                    <div class="rounded-lg overflow-hidden border">
+                        <img src="{{ asset('storage/' . $image->path) }}"
+                             alt="{{ $image->alt_text ?? $guideTitle }}"
+                             loading="lazy"
+                             class="w-full h-auto">
+                        @if($image->caption)
+                            <p class="text-sm text-gray-500 p-2 bg-gray-50 text-center">{{ $image->caption }}</p>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        @endif
+
         <!-- PDF Export Button -->
         <div class="mt-6 pt-4 border-t">
             <a href="{{ route('guides.pdf', ['locale' => $locale, 'slug' => $guide->slug]) }}"
@@ -121,7 +141,7 @@
                             <div class="space-y-3 mb-4">
                                 @foreach($step->images as $image)
                                     <div class="rounded-lg overflow-hidden border">
-                                        <img src="{{ asset($image->path) }}"
+                                        <img src="{{ asset('storage/' . $image->path) }}"
                                              alt="{{ $image->alt_text ?? $step->title }}"
                                              loading="lazy"
                                              class="w-full h-auto">
