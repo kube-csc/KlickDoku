@@ -5,12 +5,12 @@
 
 @section('content')
 
-<!-- Bild-Upload Formular (separat, vor dem Hauptformular) -->
+<!-- Globale Bilder (nicht einem Schritt zugeordnet) -->
 <form action="{{ route('admin.guides.images.store', $guide->id) }}" method="POST" enctype="multipart/form-data" class="bg-white rounded-lg shadow p-6 mb-6">
     @csrf
-    <h3 class="text-lg font-medium text-gray-900 mb-4">Bilder</h3>
+    <h3 class="text-lg font-medium text-gray-900 mb-4">Globale Bilder</h3>
     
-    <!-- Bestehende Bilder -->
+    <!-- Bestehende globale Bilder -->
     @if($guide->images->whereNull('guide_step_id')->count() > 0)
         <div class="grid grid-cols-3 gap-4 mb-4">
             @foreach($guide->images->whereNull('guide_step_id') as $image)
@@ -31,7 +31,7 @@
         </div>
     @endif
 
-    <!-- Bild hochladen -->
+    <!-- Globales Bild hochladen -->
     <div class="bg-gray-50 p-4 rounded-lg">
         @if(session('success'))
             <div class="bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded mb-3 text-sm">
@@ -170,13 +170,7 @@
 
         <!-- Schritte -->
         <div class="border-t pt-6">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-medium text-gray-900">Schritte</h3>
-                <button type="button" id="addStep" 
-                        class="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition">
-                    + Schritt hinzufügen
-                </button>
-            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Schritte</h3>
             
             <div id="stepsContainer">
                 @foreach($guide->steps as $index => $step)
@@ -186,6 +180,7 @@
                         <button type="button" class="remove-step text-red-500 hover:text-red-700 text-sm">Entfernen</button>
                     </div>
                     <div class="space-y-3">
+                        <input type="hidden" name="steps[{{ $index }}][id]" value="{{ $step->id }}">
                         <div>
                             <label class="block text-sm text-gray-600">Titel *</label>
                             <input type="text" name="steps[{{ $index }}][title]" value="{{ old("steps.$index.title", $step->title) }}" required
@@ -205,6 +200,56 @@
                             <label class="block text-sm text-gray-600">Warnung (optional)</label>
                             <textarea name="steps[{{ $index }}][warning]" rows="2"
                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">{{ old("steps.$index.warning", $step->warning) }}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Schritt-Bilder -->
+                    <div class="step-images-section mt-4 border-t border-gray-200 pt-4">
+                        <h5 class="text-sm font-medium text-gray-700 mb-2">Bilder für diesen Schritt</h5>
+                        
+                        <!-- Bestehende Schritt-Bilder -->
+                        @if($step->images->count() > 0)
+                            <div class="grid grid-cols-3 gap-4 mb-3">
+                                @foreach($step->images as $stepImage)
+                                    <div class="relative group">
+                                        <img src="{{ asset('storage/' . $stepImage->path) }}" alt="{{ $stepImage->alt_text ?? '' }}"
+                                             loading="lazy"
+                                             class="w-full h-32 object-cover rounded-lg border">
+                                        <button type="button" 
+                                                onclick="confirmDelete('{{ route('admin.guide.images.destroy', $stepImage->id) }}')"
+                                                class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition">
+                                            ✕
+                                        </button>
+                                        @if($stepImage->caption)
+                                            <p class="text-xs text-gray-500 mt-1 text-center">{{ $stepImage->caption }}</p>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <!-- Bild für Schritt hochladen -->
+                        <div class="bg-blue-50 p-3 rounded-lg">
+                            <div class="space-y-2">
+                                <div>
+                                    <label class="block text-xs text-blue-700">Bild auswählen</label>
+                                    <input type="file" id="stepImageFileInput_{{ $step->id }}" accept="image/*"
+                                           class="mt-1 block w-full text-xs text-gray-500 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200">
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-xs text-blue-700">Beschriftung</label>
+                                        <input type="text" id="stepImageCaptionInput_{{ $step->id }}" class="mt-1 block w-full rounded-md border-blue-200 shadow-sm text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-blue-700">Alt-Text</label>
+                                        <input type="text" id="stepImageAltTextInput_{{ $step->id }}" class="mt-1 block w-full rounded-md border-blue-200 shadow-sm text-sm">
+                                    </div>
+                                </div>
+                                <button type="button" onclick="uploadStepImage({{ $step->id }})" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">
+                                    Bild hochladen
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -228,48 +273,53 @@
                                             {{ $locale === 'en' ? '🇬🇧 English' : '🇩🇪 Deutsch' }}
                                         </h5>
                                         @if($trans)
-                                            <form action="{{ route('admin.guide.step.translations.destroy', [$guide, $step->id, $locale]) }}" method="POST"
-                                                  onsubmit="return confirm('Übersetzung wirklich löschen?')">
-                                                @csrf @method('DELETE')
-                                                <button type="submit" class="text-xs text-red-500 hover:text-red-700">Löschen</button>
-                                            </form>
+                                            <button type="button" onclick="deleteStepTranslation({{ $step->id }}, '{{ $locale }}', '{{ route('admin.guide.step.translations.destroy', [$guide, $step->id, $locale]) }}')"
+                                                    class="text-xs text-red-500 hover:text-red-700">Löschen</button>
                                         @endif
                                     </div>
-                                    <form action="{{ route('admin.guide.step.translations.store', [$guide, $step->id]) }}" method="POST" class="space-y-2">
-                                        @csrf
+                                    <div class="space-y-2" id="stepTranslationForm_{{ $step->id }}_{{ $locale }}">
                                         <input type="hidden" name="locale" value="{{ $locale }}">
                                         <div>
                                             <label class="block text-xs text-blue-700">Titel</label>
-                                            <input type="text" name="title" value="{{ old("step_trans.$step->id.$locale.title", $trans->title ?? '') }}"
+                                            <input type="text" id="stepTransTitle_{{ $step->id }}_{{ $locale }}" value="{{ old("step_trans.$step->id.$locale.title", $trans->title ?? '') }}"
                                                    class="mt-1 block w-full rounded-md border-blue-200 shadow-sm text-sm">
                                         </div>
                                         <div>
                                             <label class="block text-xs text-blue-700">Beschreibung</label>
-                                            <textarea name="instruction" rows="2"
+                                            <textarea id="stepTransInstruction_{{ $step->id }}_{{ $locale }}" rows="2"
                                                       class="mt-1 block w-full rounded-md border-blue-200 shadow-sm text-sm">{{ old("step_trans.$step->id.$locale.instruction", $trans->instruction ?? '') }}</textarea>
                                         </div>
                                         <div class="grid grid-cols-2 gap-2">
                                             <div>
                                                 <label class="block text-xs text-blue-700">Tipp</label>
-                                                <textarea name="tip" rows="1"
+                                                <textarea id="stepTransTip_{{ $step->id }}_{{ $locale }}" rows="1"
                                                           class="mt-1 block w-full rounded-md border-blue-200 shadow-sm text-sm">{{ old("step_trans.$step->id.$locale.tip", $trans->tip ?? '') }}</textarea>
                                             </div>
                                             <div>
                                                 <label class="block text-xs text-blue-700">Warnung</label>
-                                                <textarea name="warning" rows="1"
+                                                <textarea id="stepTransWarning_{{ $step->id }}_{{ $locale }}" rows="1"
                                                           class="mt-1 block w-full rounded-md border-blue-200 shadow-sm text-sm">{{ old("step_trans.$step->id.$locale.warning", $trans->warning ?? '') }}</textarea>
                                             </div>
                                         </div>
-                                        <button type="submit" class="mt-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">
+                                        <button type="button" onclick="saveStepTranslation({{ $step->id }}, '{{ $locale }}', '{{ route('admin.guide.step.translations.store', [$guide, $step->id]) }}')"
+                                                class="mt-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">
                                             {{ $trans ? 'Aktualisieren' : 'Speichern' }}
                                         </button>
-                                    </form>
+                                    </div>
                                 </div>
                             @endforeach
                         </div>
                     </div>
                 </div>
                 @endforeach
+            </div>
+
+            <!-- Schritt hinzufügen Button unten -->
+            <div class="mt-4">
+                <button type="button" id="addStep" 
+                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                    + Schritt hinzufügen
+                </button>
             </div>
         </div>
     </div>
@@ -286,15 +336,31 @@
     </div>
 </form>
 
+
 <script>
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || document.querySelector('input[name="_token"]').value;
+
 function confirmDelete(url) {
     if (confirm('Bild wirklich löschen?')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = url;
-        form.innerHTML = '@csrf\n@method("DELETE")';
-        document.body.appendChild(form);
-        form.submit();
+        const formData = new FormData();
+        formData.append('_token', csrfToken);
+        formData.append('_method', 'DELETE');
+        
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok || response.redirected) {
+                location.reload();
+            } else {
+                alert('Fehler beim Löschen des Bildes.');
+            }
+        })
+        .catch(error => {
+            console.error('Fehler:', error);
+            alert('Fehler beim Löschen des Bildes.');
+        });
     }
 }
 
@@ -305,6 +371,146 @@ function toggleStepTranslation(stepId, type) {
     } else {
         el.classList.add('hidden');
     }
+}
+
+// Bild für einen Schritt hochladen (per AJAX, vermeidet verschachtelte Formulare)
+function uploadStepImage(stepId) {
+    const fileInput = document.getElementById('stepImageFileInput_' + stepId);
+    const captionInput = document.getElementById('stepImageCaptionInput_' + stepId);
+    const altTextInput = document.getElementById('stepImageAltTextInput_' + stepId);
+    
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Bitte wählen Sie ein Bild aus.');
+        return;
+    }
+    
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || document.querySelector('input[name="_token"]').value;
+    
+    const formData = new FormData();
+    formData.append('image', fileInput.files[0]);
+    formData.append('step_id', stepId);
+    formData.append('_token', csrfToken);
+    if (captionInput.value) {
+        formData.append('caption', captionInput.value);
+    }
+    if (altTextInput.value) {
+        formData.append('alt_text', altTextInput.value);
+    }
+    
+    const url = "{{ route('admin.guides.images.step.store', $guide->id) }}";
+    console.log('Upload Schritt-Bild:', { url: url, stepId: stepId, file: fileInput.files[0].name, csrfToken: csrfToken ? 'vorhanden' : 'FEHLEND' });
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': csrfToken
+        },
+        body: formData
+    })
+    .then(response => {
+        console.log('Antwort Status:', response.status, 'OK:', response.ok, 'Redirected:', response.redirected);
+        
+        // Bei Validierungsfehler (422) oder anderem Fehler
+        if (!response.ok) {
+            // Versuche JSON zu parsen, falls HTML zurückkommt, zeige Status
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json().then(err => {
+                    console.error('Fehlerantwort:', err);
+                    if (err.errors) {
+                        const messages = Object.values(err.errors).flat().join('\n');
+                        alert('Fehler:\n' + messages);
+                    } else {
+                        alert('Fehler beim Hochladen: ' + (err.message || 'Unbekannter Fehler'));
+                    }
+                    throw err;
+                });
+            } else {
+                // HTML-Antwort (z.B. CSRF-Fehler Seite oder Validierungs-Redirect)
+                console.error('Nicht-JSON Fehlerantwort (HTML), Status:', response.status);
+                alert('Fehler beim Hochladen des Bildes (HTTP ' + response.status + '). Bitte prüfen Sie die Browser-Konsole.');
+                throw new Error('HTTP ' + response.status);
+            }
+        }
+        
+        // Erfolgreiche Antwort - prüfe ob JSON oder HTML (Redirect)
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json().then(data => {
+                console.log('Erfolgreich hochgeladen (JSON):', data);
+                if (data.success) {
+                    location.reload();
+                }
+            });
+        } else {
+            // HTML-Antwort nach Redirect (Laravel redirect()->back())
+            console.log('Erfolgreich hochgeladen (Redirect), Seite wird neu geladen');
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Fetch-Fehler:', error);
+    });
+}
+
+// Schritt-Übersetzung speichern (per AJAX, vermeidet verschachtelte Formulare)
+function saveStepTranslation(stepId, locale, url) {
+    const title = document.getElementById('stepTransTitle_' + stepId + '_' + locale).value;
+    const instruction = document.getElementById('stepTransInstruction_' + stepId + '_' + locale).value;
+    const tip = document.getElementById('stepTransTip_' + stepId + '_' + locale).value;
+    const warning = document.getElementById('stepTransWarning_' + stepId + '_' + locale).value;
+    
+    const formData = new FormData();
+    formData.append('locale', locale);
+    formData.append('title', title);
+    formData.append('instruction', instruction);
+    formData.append('tip', tip);
+    formData.append('warning', warning);
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.content || document.querySelector('input[name="_token"]').value);
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok || response.redirected) {
+            location.reload();
+        } else {
+            throw new Error('Speichern fehlgeschlagen');
+        }
+    })
+    .catch(error => {
+        console.error('Fehler:', error);
+        alert('Fehler beim Speichern der Übersetzung. Bitte versuchen Sie es erneut.');
+    });
+}
+
+// Schritt-Übersetzung löschen (per AJAX, vermeidet verschachtelte Formulare)
+function deleteStepTranslation(stepId, locale, url) {
+    if (!confirm('Übersetzung wirklich löschen?')) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.content || document.querySelector('input[name="_token"]').value);
+    formData.append('_method', 'DELETE');
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok || response.redirected) {
+            location.reload();
+        } else {
+            throw new Error('Löschen fehlgeschlagen');
+        }
+    })
+    .catch(error => {
+        console.error('Fehler:', error);
+        alert('Fehler beim Löschen der Übersetzung. Bitte versuchen Sie es erneut.');
+    });
 }
 
 let stepCount = {{ $guide->steps->count() }};

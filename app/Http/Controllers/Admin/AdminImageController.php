@@ -39,6 +39,13 @@ class AdminImageController extends Controller
     // Bild für einen Guide-Schritt hochladen
     public function storeGuideImage(Request $request, Guide $guide)
     {
+        \Log::info('storeGuideImage aufgerufen', [
+            'guide_id' => $guide->id,
+            'step_id' => $request->input('step_id'),
+            'all_input' => $request->all(),
+            'has_image' => $request->hasFile('image'),
+        ]);
+
         $validated = $request->validate([
             'step_id' => 'required|exists:guide_steps,id',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
@@ -50,7 +57,7 @@ class AdminImageController extends Controller
 
         $sortOrder = GuideImage::where('guide_id', $guide->id)->max('sort_order') + 1;
 
-        GuideImage::create([
+        $imageData = [
             'guide_id' => $guide->id,
             'guide_step_id' => $validated['step_id'],
             'path' => $path,
@@ -58,7 +65,31 @@ class AdminImageController extends Controller
             'caption' => $validated['caption'] ?? null,
             'alt_text' => $validated['alt_text'] ?? null,
             'sort_order' => $sortOrder,
+        ];
+
+        \Log::info('Speichere GuideImage mit Daten:', $imageData);
+
+        $image = GuideImage::create($imageData);
+
+        \Log::info('GuideImage gespeichert:', [
+            'id' => $image->id,
+            'guide_step_id' => $image->guide_step_id,
+            'guide_id' => $image->guide_id,
         ]);
+
+        // Für AJAX-Anfragen JSON zurückgeben
+        if ($request->headers->get('X-Requested-With') === 'XMLHttpRequest' || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Bild erfolgreich hochgeladen.',
+                'image' => [
+                    'id' => $image->id,
+                    'guide_step_id' => $image->guide_step_id,
+                    'path' => $image->path,
+                    'caption' => $image->caption,
+                ]
+            ], 200);
+        }
 
         return redirect()->back()
             ->with('success', 'Bild erfolgreich hochgeladen.');
@@ -67,6 +98,12 @@ class AdminImageController extends Controller
     // Bild für eine Anleitung (global) hochladen
     public function storeGuideGlobalImage(Request $request, Guide $guide)
     {
+        \Log::info('storeGuideGlobalImage aufgerufen', [
+            'guide_id' => $guide->id,
+            'all_input' => $request->all(),
+            'has_image' => $request->hasFile('image'),
+        ]);
+
         $validated = $request->validate([
             'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'caption' => 'nullable|string|max:255',
