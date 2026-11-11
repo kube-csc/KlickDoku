@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Willkommen / Welcome — Vereinsverwaltung</title>
+        <title>Willkommen / Welcome — KlickDoku</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -17,7 +17,7 @@
             <!-- Logo / Titel -->
             <div class="text-center mb-12">
                 <h1 class="text-4xl font-bold text-gray-800 mb-3">
-                    {{ config('app.name', 'Vereinsverwaltung') }}
+                    {{ config('app.name', 'KlickDoku') }}
                 </h1>
                 <p class="text-lg text-gray-500">
                     Anleitungen und Tutorials für die Vereinsverwaltung
@@ -70,7 +70,7 @@
 
             <!-- Footer -->
             <footer class="fixed bottom-4 text-center w-full">
-                <p class="text-xs text-gray-300">&copy; {{ date('Y') }} {{ config('app.name', 'Vereinsverwaltung') }}</p>
+                <p class="text-xs text-gray-300">&copy; {{ date('Y') }} {{ config('app.name', 'KlickDoku') }}</p>
             </footer>
         </div>
     </body>

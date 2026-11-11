@@ -5,8 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>@yield('title', config('app.name', 'Vereinsverwaltung'))</title>
-        <meta name="description" content="@yield('meta_description', 'Anleitungen und Tutorials für die Vereinsverwaltung')">
+        <title>@yield('title', config('app.name', 'KlickDoku'))</title>
+        <meta name="description" content="@yield('meta_description', 'Anleitungen und Tutorials für KlickDoku')">
 
         <!-- SEO Meta Tags -->
         @hasSection('meta_robots')
@@ -20,12 +20,12 @@
         @endif
 
         <!-- OpenGraph Meta Tags -->
-        <meta property="og:site_name" content="{{ config('app.name', 'Vereinsverwaltung') }}">
+        <meta property="og:site_name" content="{{ config('app.name', 'KlickDoku') }}">
         <meta property="og:locale" content="{{ str_replace('_', '-', app()->getLocale()) }}">
         @hasSection('og_title')
             <meta property="og:title" content="@yield('og_title')">
         @else
-            <meta property="og:title" content="@yield('title', config('app.name', 'Vereinsverwaltung'))">
+            <meta property="og:title" content="@yield('title', config('app.name', 'KlickDoku'))">
         @endif
         @hasSection('og_description')
             <meta property="og:description" content="@yield('og_description')">
@@ -49,7 +49,7 @@
         @hasSection('og_title')
             <meta name="twitter:title" content="@yield('og_title')">
         @else
-            <meta name="twitter:title" content="@yield('title', config('app.name', 'Vereinsverwaltung'))">
+            <meta name="twitter:title" content="@yield('title', config('app.name', 'KlickDoku'))">
         @endif
         @hasSection('og_description')
             <meta name="twitter:description" content="@yield('og_description')">
@@ -77,7 +77,7 @@
                 <div class="flex justify-between h-16">
                     <div class="flex items-center">
                         <a href="{{ route('home') }}" class="text-xl font-bold text-gray-800 hover:text-blue-600">
-                            {{ config('app.name', 'Vereinsverwaltung') }}
+                            {{ config('app.name', 'KlickDoku') }}
                         </a>
                         <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
                             <a href="{{ route('guides.index', ['locale' => app()->getLocale()]) }}"
