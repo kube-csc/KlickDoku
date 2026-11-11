@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('meta_keywords')->nullable();
             $table->timestamps();
 
-            $table->unique(['translatable_type', 'translatable_id', 'locale']);
+            $table->unique(['translatable_type', 'translatable_id', 'locale'], 'content_translations_unique');
             $table->index(['translatable_type', 'translatable_id']);
         });
     }
