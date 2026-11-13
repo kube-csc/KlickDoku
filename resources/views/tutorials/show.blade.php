@@ -297,12 +297,25 @@
     let currentStepIndex = {{ $currentStepNumber - 1 }};
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
+    // Gemeinsames Fenster für Hotspot-Links — wird über alle Schritte wiederverwendet
+    let hotspotWindow = null;
+
+    function openHotspotLink(link) {
+        if (!link) return;
+        if (!hotspotWindow || hotspotWindow.closed) {
+            hotspotWindow = window.open(link, 'hotspotWindow', 'width=1024,height=768,menubar=yes,scrollbars=yes,resizable=yes,toolbar=yes,location=yes');
+        } else {
+            hotspotWindow.location.href = link;
+            hotspotWindow.focus();
+        }
+    }
+
     // Klick-Handler für PHP-generierte Hotspots (erster Schritt beim Laden)
     document.querySelectorAll('.tutorial-hotspot[data-link]').forEach(el => {
         el.addEventListener('click', function() {
             const link = this.dataset.link;
             if (link) {
-                window.open(link, '_blank');
+                openHotspotLink(link);
             }
         });
     });
@@ -402,9 +415,9 @@
             // Klick-Handler: Hotspots mit Link sind immer klickbar
             if (hotspot.is_clickable || hotspot.link) {
                 div.addEventListener('click', function() {
-                    // Wenn Link vorhanden, dorthin navigieren (in neuem Tab)
+                    // Wenn Link vorhanden, im gemeinsamen Fenster öffnen
                     if (hotspot.link) {
-                        window.open(hotspot.link, '_blank');
+                        openHotspotLink(hotspot.link);
                         return;
                     }
                     if (!div.classList.contains('hotspot-clicked')) {
