@@ -78,10 +78,26 @@ class AdminTranslationController extends Controller
         $locales = config('app.supported_locales', ['de', 'en']);
         $defaultLocale = config('app.locale', 'de');
 
-        // Hole alle Inhalte dieses Typs
-        $items = $modelClass::latest()->paginate(20);
+        // Hole alle Inhalte dieses Typs mit Übersetzungen
+        $items = $modelClass::with('translations')->latest()->paginate(20);
 
-        return view('admin.translations.show', compact('items', 'type', 'modelClass', 'locales', 'defaultLocale'));
+        // Übersetzungsdaten als einfaches Array für die View
+        $translationsData = $items->mapWithKeys(function ($item) {
+            return [$item->id => $item->translations->mapWithKeys(function ($t) {
+                return [$t->locale => [
+                    'title' => $t->title ?? '',
+                    'description' => $t->description ?? '',
+                    'content' => $t->content ?? '',
+                ]];
+            })->toArray()];
+        })->toArray();
+
+        // Nicht-Standard-Sprachenliste
+        $localesList = array_values(array_filter($locales, function ($locale) use ($defaultLocale) {
+            return $locale !== $defaultLocale;
+        }));
+
+        return view('admin.translations.show', compact('items', 'type', 'modelClass', 'locales', 'defaultLocale', 'translationsData', 'localesList'));
     }
 
     /**

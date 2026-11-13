@@ -18,7 +18,18 @@
                         Übersetzungen
                     </h1>
                     <p class="mt-2 text-gray-600">
-                        Übersetzungen für {{ $items->total() }} {{ str_plural($type) }} verwalten.
+                        @php
+                            $typeLabels = [
+                                'guides' => ['Anleitung', 'Anleitungen'],
+                                'tutorials' => ['Tutorial', 'Tutorials'],
+                                'pages' => ['Seite', 'Seiten'],
+                                'categories' => ['Kategorie', 'Kategorien'],
+                            ];
+                            $label = $typeLabels[$type] ?? [$type, $type . 's'];
+                            $count = $items->total();
+                            $typeText = $count === 1 ? $label[0] : $label[1];
+                        @endphp
+                        Übersetzungen für {{ $count }} {{ $typeText }} verwalten.
                     </p>
                 </div>
                 <a href="{{ route('admin.translations.index') }}"
@@ -101,16 +112,13 @@
 
 <!-- Übersetzungs-Modal -->
 <div id="translationModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center pb-3 border-b">
             <h3 class="text-lg font-semibold text-gray-900">Übersetzung bearbeiten</h3>
             <button onclick="closeTranslationModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
         </div>
 
-        <form id="translationForm" method="POST" action="" class="mt-4 space-y-4">
-            @csrf
-            <input type="hidden" id="itemId" name="id">
-
+        <div class="mt-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
                     Originaltitel ({{ strtoupper($defaultLocale) }})
@@ -121,14 +129,15 @@
 
             @foreach($locales as $locale)
                 @if($locale !== $defaultLocale)
-                <div class="border-t pt-4">
+                <div class="border-t pt-4 mt-4">
                     <h4 class="text-sm font-medium text-gray-900 mb-3">
                         {{ strtoupper($locale) }} Übersetzung
                     </h4>
 
-                    <input type="hidden" name="locale" value="{{ $locale }}">
+                    <form method="POST" action="" id="form_{{ $locale }}" class="space-y-3">
+                        @csrf
+                        <input type="hidden" name="locale" value="{{ $locale }}">
 
-                    <div class="space-y-3">
                         <div>
                             <div class="flex items-center justify-between mb-1">
                                 <label class="block text-sm font-medium text-gray-700">
@@ -175,14 +184,14 @@
                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                         </div>
                         @endif
-                    </div>
+                    </form>
 
                     <div class="mt-4 flex justify-between">
-                        <button type="button" onclick="deleteTranslation({{ $type }}, {{ $item->id }}, '{{ $locale }}')"
+                        <button type="button" onclick="deleteTranslation('{{ $type }}', currentItemId, '{{ $locale }}')"
                                 class="text-red-600 hover:text-red-800 text-sm">
                             Übersetzung löschen
                         </button>
-                        <button type="submit"
+                        <button type="submit" form="form_{{ $locale }}"
                                 class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
                             Speichern
                         </button>
@@ -190,7 +199,7 @@
                 </div>
                 @endif
             @endforeach
-        </form>
+        </div>
     </div>
 </div>
 
@@ -198,27 +207,35 @@
 <script>
 let currentItemId = null;
 
+// Übersetzungsdaten als JSON-Objekt für alle Items (berechnet im Controller)
+const translationsData = @json($translationsData);
+
+const localesList = @json($localesList);
+
 function openTranslationModal(itemId, originalTitle) {
     currentItemId = itemId;
     document.getElementById('translationModal').classList.remove('hidden');
     document.getElementById('originalTitle').value = originalTitle;
-    document.getElementById('translationForm').action = `/admin/translations/${{!! json_encode($type) !!}/${itemId}/store`;
 
-    // Lade bestehende Übersetzungen
-    @foreach($locales as $locale)
-        @if($locale !== $defaultLocale)
-        @php
-            $translation = $item->translations->where('locale', $locale)->first();
-        @endphp
-        if (itemId === {{ $item->id }}) {
-            document.getElementById('title_{{ $locale }}').value = '{{ $translation->title ?? '' }}';
-            document.getElementById('description_{{ $locale }}').value = '{{ $translation->description ?? '' }}';
-            @if($type !== 'categories')
-            document.getElementById('content_{{ $locale }}').value = '{{ $translation->content ?? '' }}';
-            @endif
+    // Setze die Action-URL für jedes Formular einzeln
+    const type = {!! json_encode($type) !!};
+    localesList.forEach(locale => {
+        const form = document.getElementById('form_' + locale);
+        if (form) {
+            form.action = `/admin/translations/${type}/${itemId}/store`;
         }
+    });
+
+    // Lade bestehende Übersetzungen aus dem JSON-Objekt
+    const itemTranslations = translationsData[itemId] || {};
+    localesList.forEach(locale => {
+        const t = itemTranslations[locale] || {};
+        document.getElementById('title_' + locale).value = t.title || '';
+        document.getElementById('description_' + locale).value = t.description || '';
+        @if($type !== 'categories')
+        document.getElementById('content_' + locale).value = t.content || '';
         @endif
-    @endforeach
+    });
 }
 
 function closeTranslationModal() {
