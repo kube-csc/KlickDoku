@@ -53,7 +53,7 @@
     <!-- Fortschrittsbalken -->
     <div class="mb-6">
         <div class="flex justify-between text-sm text-gray-500 mb-2">
-            <span>{{ __('common.progress') }}: {{ $currentStepNumber }} / {{ $tutorial->steps->count() }}</span>
+            <span id="progress-text">{{ __('common.progress') }}: {{ $currentStepNumber }} / {{ $tutorial->steps->count() }}</span>
             <span id="progress-percent">{{ round(($currentStepNumber / $tutorial->steps->count()) * 100) }}%</span>
         </div>
         <div class="w-full bg-gray-200 rounded-full h-3">
@@ -435,6 +435,12 @@
         const percent = Math.round(((index + 1) / steps.length) * 100);
         document.getElementById('progress-bar').style.width = percent + '%';
         document.getElementById('progress-percent').textContent = percent + '%';
+
+        // Fortschritt-Text oben aktualisieren (z. B. "Fortschritt: 2 / 4")
+        const progressText = document.getElementById('progress-text');
+        if (progressText) {
+            progressText.textContent = '{{ __('common.progress') }}: ' + (index + 1) + ' / ' + steps.length;
+        }
 
         // Navigation
         const prevBtn = document.getElementById('prev-step-btn');
