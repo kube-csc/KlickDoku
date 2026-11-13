@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Gate;
 class CommentController extends Controller
 {
     // Kommentare auf einer Anleitung speichern (für authentifizierte Benutzer)
-    public function store(string $locale, Request $request, Guide $guide)
+    public function store(Request $request, string $locale, Guide $guide)
     {
         $validated = $request->validate([
             'body' => 'required|string|max:2000',
@@ -20,7 +20,7 @@ class CommentController extends Controller
         ]);
 
         // Wenn Reply, muss der Parent zur Anleitung gehören
-        if ($validated['parent_id']) {
+        if ($validated['parent_id'] ?? null) {
             $parent = Comment::findOrFail($validated['parent_id']);
             if ($parent->commentable_id !== $guide->id || $parent->commentable_type !== Guide::class) {
                 return redirect()->back()
@@ -58,7 +58,7 @@ class CommentController extends Controller
     }
 
     // Admin: Kommentar genehmigen
-    public function approve(string $locale, Comment $comment)
+    public function approve(Request $request, Comment $comment)
     {
         $comment->update(['status' => 'approved']);
 
@@ -70,7 +70,7 @@ class CommentController extends Controller
     }
 
     // Admin: Kommentar ablehnen
-    public function reject(string $locale, Comment $comment)
+    public function reject(Request $request, Comment $comment)
     {
         $comment->update(['status' => 'rejected']);
 
@@ -79,7 +79,7 @@ class CommentController extends Controller
     }
 
     // Kommentar löschen (nur vom Autor oder Admin)
-    public function destroy(string $locale, Comment $comment)
+    public function destroy(Request $request, Comment $comment)
     {
         if (auth()->id() !== $comment->user_id && !auth()->user()->isAdmin) {
             abort(403);
