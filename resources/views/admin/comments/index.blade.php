@@ -89,7 +89,7 @@
                             
                             @if($comment->commentable)
                                 <p class="text-sm text-gray-500 mb-3">
-                                    Zu: <a href="{{ route('guides.show', $comment->commentable->slug) }}" class="text-blue-600 hover:underline">
+                                    Zu: <a href="{{ route('guides.show', ['locale' => app()->getLocale(), 'slug' => $comment->commentable->slug]) }}" class="text-blue-600 hover:underline">
                                         {{ $comment->commentable->title }}
                                     </a>
                                 </p>
@@ -114,7 +114,7 @@
                                         </button>
                                     </form>
                                 @endif
-                                <form action="{{ route('comments.destroy', $comment->id) }}" method="POST" class="inline"
+                                <form action="{{ route('comments.destroy', ['locale' => app()->getLocale(), 'comment' => $comment->id]) }}" method="POST" class="inline"
                                     onsubmit="return confirm('Kommentar wirklich löschen?')">
                                     @csrf
                                     @method('DELETE')
