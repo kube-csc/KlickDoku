@@ -186,7 +186,11 @@
                 <div class="step-item bg-gray-50 p-4 rounded-lg mb-4" data-step="{{ $index }}">
                     <div class="flex justify-between items-center mb-3">
                         <h4 class="font-medium text-gray-700">Schritt {{ $index + 1 }}</h4>
-                        <button type="button" class="remove-step text-red-500 hover:text-red-700 text-sm">Entfernen</button>
+                        <div class="flex items-center gap-2">
+                            <button type="button" class="move-step-up text-blue-500 hover:text-blue-700 text-sm" title="Schritt nach oben verschieben">↑</button>
+                            <button type="button" class="move-step-down text-blue-500 hover:text-blue-700 text-sm" title="Schritt nach unten verschieben">↓</button>
+                            <button type="button" class="remove-step text-red-500 hover:text-red-700 text-sm">Entfernen</button>
+                        </div>
                     </div>
                     <div class="space-y-3">
                         <input type="hidden" name="steps[{{ $index }}][screenshot_path]" value="{{ old("steps.$index.screenshot_path", $step->screenshot_path) }}">
@@ -564,7 +568,11 @@ document.getElementById('addStep').addEventListener('click', function() {
     <div class="step-item bg-gray-50 p-4 rounded-lg mb-4" data-step="${stepCount}">
         <div class="flex justify-between items-center mb-3">
             <h4 class="font-medium text-gray-700">Schritt ${stepCount + 1}</h4>
-            <button type="button" class="remove-step text-red-500 hover:text-red-700 text-sm">Entfernen</button>
+            <div class="flex items-center gap-2">
+                <button type="button" class="move-step-up text-blue-500 hover:text-blue-700 text-sm" title="Schritt nach oben verschieben">↑</button>
+                <button type="button" class="move-step-down text-blue-500 hover:text-blue-700 text-sm" title="Schritt nach unten verschieben">↓</button>
+                <button type="button" class="remove-step text-red-500 hover:text-red-700 text-sm">Entfernen</button>
+            </div>
         </div>
         <div class="space-y-3">
             <input type="hidden" name="steps[${stepCount}][screenshot_path]" class="screenshot-path-input" value="">
@@ -643,6 +651,22 @@ document.addEventListener('click', function(e) {
     if (e.target.classList.contains('remove-step')) {
         e.target.closest('.step-item').remove();
         updateStepNumbers();
+    }
+    if (e.target.classList.contains('move-step-up')) {
+        const stepItem = e.target.closest('.step-item');
+        const prevStep = stepItem.previousElementSibling;
+        if (prevStep && prevStep.classList.contains('step-item')) {
+            stepItem.parentNode.insertBefore(stepItem, prevStep);
+            updateStepNumbers();
+        }
+    }
+    if (e.target.classList.contains('move-step-down')) {
+        const stepItem = e.target.closest('.step-item');
+        const nextStep = stepItem.nextElementSibling;
+        if (nextStep && nextStep.classList.contains('step-item')) {
+            stepItem.parentNode.insertBefore(nextStep, stepItem);
+            updateStepNumbers();
+        }
     }
 
     if (e.target.classList.contains('add-hotspot')) {

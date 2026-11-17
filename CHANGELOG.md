@@ -66,3 +66,10 @@ Ein zentrales Dokumentationssystem, das aus einer einzigen Master-Dokumentation 
 
 **Dokumentation:**
 - `docs/Konzept.md` um Kapitel 11 (Multi-Projekt-System) erweitert
+
+### Verbessert
+
+**Admin-Panel – Schritt-Verschiebung:**
+- Schritte in Guide- und Tutorial-Edit-Views können jetzt per ↑/↓-Buttons verschoben werden
+- `updateStepNumbers()` aktualisiert nach dem Tausch alle Formularfeld-Namen (`steps[0]`, `steps[1]`, ...), `data-step`-Attribute, `id`-Attribute und KI-Button-`onclick`-Handler lückenlos neu
+- Backend benötigt keine Änderungen — `step_number` wird basierend auf dem Array-Index im Formular zugewiesen

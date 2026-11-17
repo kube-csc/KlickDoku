@@ -242,7 +242,11 @@
                 <div class="step-item bg-gray-50 p-4 rounded-lg mb-4" data-step="{{ $index }}">
                     <div class="flex justify-between items-center mb-3">
                         <h4 class="font-medium text-gray-700">Schritt {{ $index + 1 }}</h4>
-                        <button type="button" class="remove-step text-red-500 hover:text-red-700 text-sm">Entfernen</button>
+                        <div class="flex items-center gap-2">
+                            <button type="button" class="move-step-up text-blue-500 hover:text-blue-700 text-sm" title="Schritt nach oben verschieben">↑</button>
+                            <button type="button" class="move-step-down text-blue-500 hover:text-blue-700 text-sm" title="Schritt nach unten verschieben">↓</button>
+                            <button type="button" class="remove-step text-red-500 hover:text-red-700 text-sm">Entfernen</button>
+                        </div>
                     </div>
                     <div class="space-y-3">
                         <input type="hidden" name="steps[{{ $index }}][id]" value="{{ $step->id }}">
@@ -611,7 +615,11 @@ document.getElementById('addStep').addEventListener('click', function() {
     <div class="step-item bg-gray-50 p-4 rounded-lg mb-4" data-step="${stepCount}">
         <div class="flex justify-between items-center mb-3">
             <h4 class="font-medium text-gray-700">Schritt ${stepCount + 1}</h4>
-            <button type="button" class="remove-step text-red-500 hover:text-red-700 text-sm">Entfernen</button>
+            <div class="flex items-center gap-2">
+                <button type="button" class="move-step-up text-blue-500 hover:text-blue-700 text-sm" title="Schritt nach oben verschieben">↑</button>
+                <button type="button" class="move-step-down text-blue-500 hover:text-blue-700 text-sm" title="Schritt nach unten verschieben">↓</button>
+                <button type="button" class="remove-step text-red-500 hover:text-red-700 text-sm">Entfernen</button>
+            </div>
         </div>
         <div class="space-y-3">
             <div>
@@ -668,12 +676,51 @@ document.addEventListener('click', function(e) {
         e.target.closest('.step-item').remove();
         updateStepNumbers();
     }
+    if (e.target.classList.contains('move-step-up')) {
+        const stepItem = e.target.closest('.step-item');
+        const prevStep = stepItem.previousElementSibling;
+        if (prevStep && prevStep.classList.contains('step-item')) {
+            stepItem.parentNode.insertBefore(stepItem, prevStep);
+            updateStepNumbers();
+        }
+    }
+    if (e.target.classList.contains('move-step-down')) {
+        const stepItem = e.target.closest('.step-item');
+        const nextStep = stepItem.nextElementSibling;
+        if (nextStep && nextStep.classList.contains('step-item')) {
+            stepItem.parentNode.insertBefore(nextStep, stepItem);
+            updateStepNumbers();
+        }
+    }
 });
 
 function updateStepNumbers() {
     const steps = document.querySelectorAll('.step-item');
     steps.forEach((step, index) => {
+        // Sichtbare Schritt-Nummer aktualisieren
         step.querySelector('h4').textContent = `Schritt ${index + 1}`;
+        // data-step Attribut aktualisieren
+        step.setAttribute('data-step', index);
+        // Alle name Attribute in input, textarea, select umbenennen
+        step.querySelectorAll('input[name], textarea[name], select[name]').forEach(el => {
+            const oldName = el.getAttribute('name');
+            if (oldName) {
+                const newName = oldName.replace(/steps\[\d+\]/, `steps[${index}]`);
+                el.setAttribute('name', newName);
+            }
+        });
+        // IDs von Textareas aktualisieren (z.B. step_0_description -> step_1_description)
+        step.querySelectorAll('textarea[id]').forEach(el => {
+            const oldId = el.getAttribute('id');
+            if (oldId && oldId.startsWith('step_')) {
+                const newId = oldId.replace(/step_\d+/, `step_${index}`);
+                el.setAttribute('id', newId);
+            }
+        });
+        // onclick Handler der KI-Buttons aktualisieren
+        step.querySelectorAll('button[onclick*="aiGenerateStepText"]').forEach(btn => {
+            btn.setAttribute('onclick', `aiGenerateStepText(${index}, '${btn.getAttribute('onclick').match(/'([^']+)'/g)[0]?.replace(/'/g, '') || ''}', '${btn.getAttribute('onclick').match(/'([^']+)'/g)[1]?.replace(/'/g, '') || ''}')`);
+        });
     });
 }
 
