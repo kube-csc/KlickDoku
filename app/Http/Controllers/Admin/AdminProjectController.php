@@ -301,6 +301,9 @@ class AdminProjectController extends Controller
             'alt_text' => 'nullable|string|max:255',
         ]);
 
+        // Lade die Guides für dieses Projekt
+        $project->load('guides');
+
         // Prüfen, dass der Guide dem Projekt zugewiesen ist
         if (!$project->guides->contains($validated['guide_id'])) {
             return back()->withErrors(['image' => 'Der Guide ist diesem Projekt nicht zugewiesen.']);
@@ -346,6 +349,9 @@ class AdminProjectController extends Controller
                 'success' => true,
                 'message' => 'Screenshot erfolgreich hochgeladen.',
                 'path' => $path,
+                'url' => \Illuminate\Support\Facades\Storage::disk('public')->url($path),
+                'guide_id' => $validated['guide_id'],
+                'step_id' => $validated['step_id'],
             ]);
         }
 
@@ -368,6 +374,9 @@ class AdminProjectController extends Controller
             'step_id' => 'required|exists:tutorial_steps,id',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
+
+        // Lade die Tutorials für dieses Projekt
+        $project->load('tutorials');
 
         // Prüfen, dass das Tutorial dem Projekt zugewiesen ist
         if (!$project->tutorials->contains($validated['tutorial_id'])) {
@@ -414,6 +423,9 @@ class AdminProjectController extends Controller
                 'success' => true,
                 'message' => 'Screenshot erfolgreich hochgeladen.',
                 'path' => $path,
+                'url' => \Illuminate\Support\Facades\Storage::disk('public')->url($path),
+                'tutorial_id' => $validated['tutorial_id'],
+                'step_id' => $validated['step_id'],
             ]);
         }
 

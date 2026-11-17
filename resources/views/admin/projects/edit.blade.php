@@ -609,7 +609,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </p>
                                 </div>
                                 ${hasProject ? `
-                                    <form action="${'{{ url('admin/projects') }}/${$project->id}/guide-screenshots/' + step.id}" method="POST" class="inline">
+                                    <form action="/admin/projects/{{ $project->id }}/guide-screenshots/${step.id}" method="POST" class="inline">
                                         @csrf
                                         @method('DELETE')
                                         <input type="hidden" name="tab" value="screenshots">
@@ -635,17 +635,22 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                 ` : '<div></div>'}
                             </div>
-                            <form action="{{ route('admin.projects.guide-screenshots.store', $project) }}" method="POST" enctype="multipart/form-data" class="flex items-center space-x-2">
-                                @csrf
-                                <input type="hidden" name="tab" value="screenshots">
-                                <input type="hidden" name="guide_id" value="${guideId}">
-                                <input type="hidden" name="step_id" value="${step.id}">
-                                <input type="file" name="image" accept="image/*" class="text-xs" required>
-                                <input type="text" name="caption" placeholder="Beschreibung" class="text-xs px-2 py-1 border border-gray-300 rounded" value="${projectImage?.caption || ''}">
-                                <button type="submit" class="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">
-                                    ${hasProject ? 'Ersetzen' : 'Hochladen'}
+                            <div class="flex items-center space-x-2 flex-wrap gap-2">
+                                <form action="{{ route('admin.projects.guide-screenshots.store', $project) }}" method="POST" enctype="multipart/form-data" class="flex items-center space-x-2">
+                                    @csrf
+                                    <input type="hidden" name="tab" value="screenshots">
+                                    <input type="hidden" name="guide_id" value="${guideId}">
+                                    <input type="hidden" name="step_id" value="${step.id}">
+                                    <input type="file" name="image" accept="image/*" class="text-xs" required>
+                                    <input type="text" name="caption" placeholder="Beschreibung" class="text-xs px-2 py-1 border border-gray-300 rounded" value="${projectImage?.caption || ''}">
+                                    <button type="submit" class="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">
+                                        ${hasProject ? 'Ersetzen' : 'Hochladen'}
+                                    </button>
+                                </form>
+                                <button type="button" onclick="startProjectGuideScreenshotCapture({{ $project->id }}, ${guideId}, ${step.id})" class="px-3 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 transition">
+                                    📸 Screenshot mit Bereichsauswahl
                                 </button>
-                            </form>
+                            </div>
                         </div>
                     `;
                 });
@@ -696,7 +701,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </p>
                                 </div>
                                 ${hasProject ? `
-                                    <form action="${'{{ url('admin/projects') }}/${$project->id}/tutorial-screenshots/' + step.id}" method="POST" class="inline">
+                                    <form action="/admin/projects/{{ $project->id }}/tutorial-screenshots/${step.id}" method="POST" class="inline">
                                         @csrf
                                         @method('DELETE')
                                         <input type="hidden" name="tab" value="screenshots">
@@ -720,16 +725,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                 ` : '<div></div>'}
                             </div>
-                            <form action="{{ route('admin.projects.tutorial-screenshots.store', $project) }}" method="POST" enctype="multipart/form-data" class="flex items-center space-x-2">
-                                @csrf
-                                <input type="hidden" name="tab" value="screenshots">
-                                <input type="hidden" name="tutorial_id" value="${tutorialId}">
-                                <input type="hidden" name="step_id" value="${step.id}">
-                                <input type="file" name="image" accept="image/*" class="text-xs" required>
-                                <button type="submit" class="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">
-                                    ${hasProject ? 'Ersetzen' : 'Hochladen'}
+                            <div class="flex items-center space-x-2 flex-wrap gap-2">
+                                <form action="{{ route('admin.projects.tutorial-screenshots.store', $project) }}" method="POST" enctype="multipart/form-data" class="flex items-center space-x-2">
+                                    @csrf
+                                    <input type="hidden" name="tab" value="screenshots">
+                                    <input type="hidden" name="tutorial_id" value="${tutorialId}">
+                                    <input type="hidden" name="step_id" value="${step.id}">
+                                    <input type="file" name="image" accept="image/*" class="text-xs" required>
+                                    <button type="submit" class="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">
+                                        ${hasProject ? 'Ersetzen' : 'Hochladen'}
+                                    </button>
+                                </form>
+                                <button type="button" onclick="startProjectTutorialScreenshotCapture({{ $project->id }}, ${tutorialId}, ${step.id})" class="px-3 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 transition">
+                                    📸 Screenshot mit Bereichsauswahl
                                 </button>
-                            </form>
+                            </div>
                         </div>
                     `;
                 });

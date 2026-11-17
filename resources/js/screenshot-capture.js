@@ -507,6 +507,204 @@ function uploadScreenshotFromBlob(tutorialId, stepId, file) {
 }
 
 // ============================================================
+// Projekt-spezifische Screenshot-Funktionen
+// ============================================================
+
+/**
+ * Screenshot mit Bereichsauswahl für projekt-spezifischen Guide-Schritt starten
+ * @param {number} projectId - ID des Projekts
+ * @param {number} guideId - ID der Anleitung
+ * @param {number} stepId - ID des Guide-Schritts
+ */
+window.startProjectGuideScreenshotCapture = function(projectId, guideId, stepId) {
+    console.log('=== startProjectGuideScreenshotCapture aufgerufen! ===', projectId, guideId, stepId);
+    
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        alert('Ihr Browser unterstützt keine Bildschirmaufnahme. Bitte verwenden Sie Chrome, Firefox oder Edge.');
+        return;
+    }
+    
+    navigator.mediaDevices.getDisplayMedia({
+        video: {
+            cursor: 'always',
+        },
+        audio: false
+    }).then((stream) => {
+        console.log('=== Bildschirmfreigabe gewährt, Stream erhalten ===');
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.autoplay = true;
+        video.muted = true;
+        video.style.display = 'none';
+        document.body.appendChild(video);
+
+        video.play().then(() => {
+            console.log('=== Video spielt, Bereichsauswahl-Overlay wird erstellt ===');
+            createSelectionOverlay(video).then((imageBlob) => {
+                console.log('=== Bereich ausgewählt! ImageBlob erhalten ===');
+                stream.getTracks().forEach(track => track.stop());
+                const file = new File([imageBlob], 'screenshot.png', { type: 'image/png' });
+                uploadProjectGuideScreenshotFromBlob(projectId, guideId, stepId, file);
+            }).catch((error) => {
+                console.log('Screenshot abgebrochen:', error.message);
+                stream.getTracks().forEach(track => track.stop());
+            });
+        }).catch((error) => {
+            console.error('Video-Start-Fehler:', error);
+            stream.getTracks().forEach(track => track.stop());
+        });
+    }).catch((error) => {
+        console.log('Bildschirmfreigabe abgebrochen:', error);
+    });
+};
+
+/**
+ * Lädt ein Screenshot-Blob für einen projekt-spezifischen Guide-Schritt hoch
+ */
+function uploadProjectGuideScreenshotFromBlob(projectId, guideId, stepId, file) {
+    console.log('uploadProjectGuideScreenshotFromBlob aufgerufen:', projectId, guideId, stepId);
+
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('guide_id', guideId);
+    formData.append('step_id', stepId);
+    formData.append('tab', 'screenshots');
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+    const url = `/admin/projects/${projectId}/guide-screenshots`;
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: formData,
+    })
+    .then(response => {
+        if (response.headers.get('content-type')?.includes('application/json')) {
+            return response.json().then(data => {
+                if (data.success) {
+                    console.log('Guide-Screenshot erfolgreich hochgeladen, Seite wird neu geladen...');
+                    window.location.href = window.location.pathname + '?tab=screenshots';
+                } else {
+                    alert('Fehler beim Hochladen: ' + (data.message || 'Unbekannter Fehler'));
+                }
+            });
+        }
+        if (response.ok) {
+            window.location.href = window.location.pathname + '?tab=screenshots';
+            return;
+        }
+        return response.text().then(text => {
+            console.error('Upload-Fehler:', response.status, text);
+            alert('Fehler beim Hochladen des Screenshots: HTTP ' + response.status);
+        });
+    })
+    .catch(error => {
+        console.error('Upload Netzwerk-Fehler:', error);
+        alert('Fehler beim Hochladen des Screenshots: ' + error.message);
+    });
+}
+
+
+/**
+ * Screenshot mit Bereichsauswahl für projekt-spezifischen Tutorial-Schritt starten
+ * @param {number} projectId - ID des Projekts
+ * @param {number} tutorialId - ID des Tutorials
+ * @param {number} stepId - ID des Tutorial-Schritts
+ */
+window.startProjectTutorialScreenshotCapture = function(projectId, tutorialId, stepId) {
+    console.log('=== startProjectTutorialScreenshotCapture aufgerufen! ===', projectId, tutorialId, stepId);
+    
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        alert('Ihr Browser unterstützt keine Bildschirmaufnahme. Bitte verwenden Sie Chrome, Firefox oder Edge.');
+        return;
+    }
+    
+    navigator.mediaDevices.getDisplayMedia({
+        video: {
+            cursor: 'always',
+        },
+        audio: false
+    }).then((stream) => {
+        console.log('=== Bildschirmfreigabe gewährt, Stream erhalten ===');
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.autoplay = true;
+        video.muted = true;
+        video.style.display = 'none';
+        document.body.appendChild(video);
+
+        video.play().then(() => {
+            console.log('=== Video spielt, Bereichsauswahl-Overlay wird erstellt ===');
+            createSelectionOverlay(video).then((imageBlob) => {
+                console.log('=== Bereich ausgewählt! ImageBlob erhalten ===');
+                stream.getTracks().forEach(track => track.stop());
+                const file = new File([imageBlob], 'screenshot.png', { type: 'image/png' });
+                uploadProjectTutorialScreenshotFromBlob(projectId, tutorialId, stepId, file);
+            }).catch((error) => {
+                console.log('Screenshot abgebrochen:', error.message);
+                stream.getTracks().forEach(track => track.stop());
+            });
+        }).catch((error) => {
+            console.error('Video-Start-Fehler:', error);
+            stream.getTracks().forEach(track => track.stop());
+        });
+    }).catch((error) => {
+        console.log('Bildschirmfreigabe abgebrochen:', error);
+    });
+};
+
+/**
+ * Lädt ein Screenshot-Blob für einen projekt-spezifischen Tutorial-Schritt hoch
+ */
+function uploadProjectTutorialScreenshotFromBlob(projectId, tutorialId, stepId, file) {
+    console.log('uploadProjectTutorialScreenshotFromBlob aufgerufen:', projectId, tutorialId, stepId);
+
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('tutorial_id', tutorialId);
+    formData.append('step_id', stepId);
+    formData.append('tab', 'screenshots');
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+    const url = `/admin/projects/${projectId}/tutorial-screenshots`;
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: formData,
+    })
+    .then(response => {
+        if (response.headers.get('content-type')?.includes('application/json')) {
+            return response.json().then(data => {
+                if (data.success) {
+                    console.log('Tutorial-Screenshot erfolgreich hochgeladen, Seite wird neu geladen...');
+                    window.location.href = window.location.pathname + '?tab=screenshots';
+                } else {
+                    alert('Fehler beim Hochladen: ' + (data.message || 'Unbekannter Fehler'));
+                }
+            });
+        }
+        if (response.ok) {
+            window.location.href = window.location.pathname + '?tab=screenshots';
+            return;
+        }
+        return response.text().then(text => {
+            console.error('Upload-Fehler:', response.status, text);
+            alert('Fehler beim Hochladen des Screenshots: HTTP ' + response.status);
+        });
+    })
+    .catch(error => {
+        console.error('Upload Netzwerk-Fehler:', error);
+        alert('Fehler beim Hochladen des Screenshots: ' + error.message);
+    });
+}
+
+
+// ============================================================
 // Guide-Screenshot-Funktionen (gleiche Logik wie Tutorials)
 // ============================================================
 
