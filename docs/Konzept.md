@@ -314,9 +314,14 @@ Die Webseitevereinsverwaltung verwendet eine **eigene, separate Datenbank**, die
 
 | Tabelle | Zweck | Zeilen (geschätzt) |
 |---|---|---|
-| `users` | Benutzerkonten | 100–1000 |
-| `password_reset_tokens` | Passwort-Zurücksetzen | — |
-| `sessions` | Login-Sessions | — |
+| `users` | Benutzerkonten (Laravel Jetstream) | 100–1000 |
+| `cache` | Laravel-Cache | — |
+| `cache_locks` | Cache-Sperren | — |
+| `failed_jobs` | Fehlgeschlagene Jobs | — |
+| `jobs` | Warteschlangen-Jobs | — |
+| `migrations` | Laravel-Migrations-Tracking | — |
+| `personal_access_tokens` | API-Tokens (Laravel Sanctum) | — |
+| `passkeys` | Passkeys für 2FA (Jetstream) | — |
 | `categories` | Anleitungskategorien | 10–50 |
 | `guides` | Anleitungen (Dokumentation) | 50–500 |
 | `guide_steps` | Schritte innerhalb einer Anleitung | 200–2000 |
@@ -325,18 +330,22 @@ Die Webseitevereinsverwaltung verwendet eine **eigene, separate Datenbank**, die
 | `tutorial_steps` | Schritte eines interaktiven Tutorials | 100–1000 |
 | `tutorial_hotspots` | Klick-Bereiche auf Screenshots | 200–2000 |
 | `tutorial_progress` | Nutzer-Fortschritt pro Tutorial | 200–5000 |
-| `comments` | Kommentare (polymorph) | 500–5000 |
+| `comments` | Kommentare (mit Moderation) | 500–5000 |
 | `feedback` | Nutzer-Feedback | 100–1000 |
 | `ratings` | Bewertungen (polymorph) | 500–5000 |
 | `pages` | Statische Seiten (Marketing) | 10–50 |
 | `tags` | Tags für Kategorien | 50–200 |
 | `taggables` | Pivot-Tabelle für Tags | — |
-| `cache` | Laravel-Cache | — |
-| `cache_locks` | Cache-Sperren | — |
-| `failed_jobs` | Fehlgeschlagene Jobs | — |
-| `jobs` | Warteschlangen-Jobs | — |
-| `migrations` | Laravel-Migrations-Tracking | — |
-| `personal_access_tokens` | API-Tokens (optional) | — |
+| `content_translations` | Inhalt-Übersetzungen (polymorph) | 500–5000 |
+| `step_translations` | Schritt-Übersetzungen (Guide + Tutorial) | 500–10000 |
+| `projects` | Projektkonfiguration (Multi-Projekt) | 5–50 |
+| `project_terms` | Platzhalter-Ersetzungen pro Projekt | 50–500 |
+| `guide_project` | Pivot: Guide ↔ Project | — |
+| `tutorial_project` | Pivot: Tutorial ↔ Project | — |
+| `project_guide_images` | Projekt-spezifische Screenshots (Guide) | 100–2000 |
+| `project_tutorial_images` | Projekt-spezifische Screenshots (Tutorial) | 100–2000 |
+| `placeholder_definitions` | Globaler Platzhalter-Katalog | ~20 |
+| `project_user` | Pivot: Project ↔ User (mit Rollen) | — |
 
 ### 3.2 Vollständige Modelldefinitionen
 
@@ -752,9 +761,11 @@ app/Models/
 ├── Category.php
 ├── Guide.php
 ├── GuideStep.php
+├── GuideStepTranslation.php  — Schritt-Übersetzungen (polymorph)
 ├── GuideImage.php
 ├── Tutorial.php
 ├── TutorialStep.php
+├── TutorialStepTranslation.php — Schritt-Übersetzungen (polymorph)
 ├── TutorialHotspot.php
 ├── TutorialProgress.php
 ├── Page.php
@@ -762,34 +773,41 @@ app/Models/
 ├── Feedback.php
 ├── Rating.php
 ├── Tag.php
-└── SearchableTrait.php      — Trait für suchbare Modelle
+├── ContentTranslation.php    — Inhalt-Übersetzungen (polymorph)
+├── Project.php               — Projektkonfiguration (Multi-Projekt-System)
+├── ProjectTerm.php           — Platzhalter-Ersetzung pro Projekt
+├── ProjectGuideImage.php     — Projekt-spezifische Screenshots (Guide)
+├── ProjectTutorialImage.php  — Projekt-spezifische Screenshots (Tutorial)
+├── PlaceholderDefinition.php — Globaler Platzhalter-Katalog
+├── GuideProject.php          — Pivot: Guide ↔ Project
+└── TutorialProject.php       — Pivot: Tutorial ↔ Project
 ```
 
 ### 5.2 Controller-Struktur
 
 ```
 app/Http/Controllers/
-├── HomeController.php              — Startseite
-├── ProjectController.php           — Projektbeschreibung
-├── ModuleController.php            — Module-Übersicht
+├── Controller.php                  — Basisklasse
 ├── GuideController.php             — Anleitungen (öffentlich)
-├── TutorialController.php          — Tutorials (Player + CRUD)
-├── TutorialStepController.php      — Tutorial-Schritte (CRUD)
-├── TutorialHotspotController.php   — Hotspot-Koordinaten speichern
-├── PageController.php              — Statische Seiten
-├── CommentController.php           — Kommentare
-├── FeedbackController.php          — Feedback
-├── RatingController.php            — Bewertungen
-├── SearchController.php            — Suchfunktion
-├── Auth/                           — Laravel Breeze Auth-Controller
-└── Admin/
-    ├── DashboardController.php
-    ├── AdminGuideController.php    — Anleitungen verwalten (CRUD)
-    ├── AdminImageController.php    — Bild-Upload und -Verwaltung
-    ├── AdminTranslationController.php — Übersetzungen verwalten (polymorph)
-    ├── TutorialAdminController.php
-    ├── UserAdminController.php
-    └── CommentModerationController.php
+├── TutorialController.php          — Tutorials (öffentlich, inkl. Fortschritt)
+├── PageController.php              — Statische Seiten (öffentlich)
+├── CommentController.php           — Kommentare (öffentlich + Admin-Moderation)
+├── SearchController.php            — Suchfunktion (öffentlich)
+└── HealthController.php            — Health Check Endpunkte (Monitoring)
+
+app/Http/Controllers/Admin/
+├── AdminCategoryController.php     — Kategorien verwalten (CRUD)
+├── AdminGuideController.php        — Anleitungen verwalten (CRUD)
+├── AdminTutorialController.php     — Tutorials verwalten (CRUD, OG-Bild)
+├── AdminPageController.php         — Seiten verwalten (CRUD)
+├── AdminImageController.php        — Bild-Upload und -Verwaltung
+├── AdminTranslationController.php  — Übersetzungen verwalten (polymorph)
+├── AdminStepTranslationController.php — Schritt-Übersetzungen (AJAX)
+├── AdminAIController.php           — KI-Beschreibung/Übersetzung/Inhalt generieren
+├── AdminStatisticsController.php   — Dashboard-Statistiken
+├── AdminProjectController.php      — Multi-Projekt-Verwaltung (CRUD, Begriffe,
+│                                   Inhaltsfreigabe, Screenshots, User-Zuweisungen)
+```
 
 **AdminTranslationController:**
 - `index()`: Zeigt Statistiken pro Inhaltstyp und Sprache (Anzahl übersetzte Items)
@@ -798,11 +816,23 @@ app/Http/Controllers/
 - `destroy($type, $id, $locale)`: Löscht spezifische Übersetzung
 - **Eager Loading:** `$modelClass::with('translations')` vermeidet N+1-Abfragen
 - **Daten-Berechnung:** Übersetzungsdaten und Sprachen-Liste werden im Controller als Arrays berechnet und an die View übergeben
-```
+
+**AdminStepTranslationController:**
+- `storeGuideStep()`: Speichert/aktualisiert Schritt-Übersetzungen für Guide-Schritte (AJAX)
+- `destroyGuideStep()`: Löscht spezifische Schritt-Übersetzung
+- `storeTutorialStep()`: Speichert/aktualisiert Schritt-Übersetzungen für Tutorial-Schritte (AJAX)
+- `destroyTutorialStep()`: Löscht spezifische Schritt-Übersetzung
+
+**AdminAIController:**
+- `generateDescription()`: Generiert Beschreibung per KI (OpenAI API)
+- `generateTranslation()`: Generiert Übersetzung einzelner Felder per KI
+- `generateContent()`: Generiert vollständigen Anleitungsentwurf per KI
 
 **AdminImageController:**
 - `storeGuideImage()`: Speichert Bilder für Anleitungen, entweder global oder einem Schritt zugeordnet (`step_id`)
 - `storeGuideGlobalImage()`: Speichert globale Bilder ohne Schritt-Zuordnung
+- `destroyGuideImage()`: Löscht Guide-Bilder
+- `storeGuideScreenshot()`: Speichert Guide-Screenshot (Header-Bild)
 - `storeTutorialScreenshot()`: Speichert Screenshots für Tutorial-Schritte (mit `{tutorial:id}` Route Model Binding)
 - `destroyTutorialScreenshot()`: Löscht Screenshots von Tutorial-Schritten
 - Unterstützt AJAX-Anfragen mit JSON-Antwort und Redirect-Optionen
@@ -818,83 +848,230 @@ app/Http/Controllers/
 - Fehlerbehandlung mit try-catch und benutzerfreundlichen Fehlermeldungen
 - SEO-Titel und -Beschreibung werden automatisch aus Titel/Beschreibung generiert, wenn leer gelassen
 
+**AdminProjectController:**
+- `index()`, `create()`, `store()`, `edit()`, `update()`, `destroy()`: Projekt-CRUD
+- `updateTerms()`: Aktualisiert projekt-spezifische Begriffe (Platzhalter-Ersetzungen)
+- `importTerms()`: Importiert Begriffe aus Language Files
+- `suggestTerms()`: Liefert Begriffs-Vorschläge aus Hauptprojekten (JSON)
+- `exportTermsJson()` / `exportTermsCsv()`: Exportiert Begriffe als JSON/CSV
+- `importTermsJson()` / `importTermsCsv()`: Importiert Begriffe aus JSON/CSV-Dateien
+- `assignGuides()` / `assignTutorials()`: Inhaltsfreigabe (Opt-in Zuweisung)
+- `getGuideScreenshots()` / `getTutorialScreenshots()`: Liefert Guide/Tutorial-Schritte mit Screenshot-Status (JSON)
+- `storeGuideScreenshot()` / `storeTutorialScreenshot()`: Speichert projekt-spezifische Screenshots
+- `destroyGuideScreenshot()` / `destroyTutorialScreenshot()`: Löscht projekt-spezifische Screenshots
+- `assignUsers()`: Weist Users Projekten zu (mit Rollen)
+- `removeUser()`: Entfernt User aus Projekt
+
+**CommentController:**
+- `store()`: Speichert Kommentar (authentifizierte Benutzer)
+- `destroy()`: Löscht Kommentar
+- `index()`: Admin-Übersicht aller Kommentare
+- `approve()`: Genehmigt Kommentar
+- `reject()`: Ablehnt Kommentar
+
+**HealthController:**
+- `check()`: Detaillierter Health Check (Datenbank, Cache, Queue)
+- `ping()`: Einfacher Ping-Endpunkt für Load Balancer
+
 ### 5.3 Middleware
 
 ```
 app/Http/Middleware/
-├── RoleMiddleware.php        — Rollenprüfung (guest, user, editor, admin)
-├── VerifyGuideAuthor.php     — Prüft, ob Benutzer der Autor ist
-└── ModerateComments.php      — Automatische Moderation (optional)
+├── SetLocale.php             — Setzt die App-Sprache basierend auf dem Route-Parameter {locale}
+├── SetProject.php            — Erkennt und setzt aktuelles Projekt (Multi-Projekt-System)
+│                             — Verwendet ProjectResolver: Subdomain → Query-Param → Domain
+└── SetCacheHeaders.php       — Setzt Cache-Header für öffentliche Seiten (Caching-Strategie)
 ```
+
+**SetProject Middleware:**
+- Wird bei allen öffentlichen Routen mit `{locale}`-Präfix angewendet
+- Erkennt das aktuelle Projekt via `ProjectResolver::resolveFromRequest()`
+- Speichert das erkannte Projekt als Request-Attribut (`$request->attributes->set('project')`)
+- Stellt das Projekt über den Helper `currentProject()` global verfügbar
+- Reservierte Subdomains (`www`, `api`, `admin`, `mail`, `ftp`, `smtp`, `pop`, `imap`, `webmail`, `cdn`, `static`) werden ignoriert
+
+**SetLocale Middleware:**
+- Extrahiert `{locale}` aus der Route und setzt `App::setLocale()`
+- Validiert gegen `config('app.supported_locales')`
+- Fallback auf `APP_LOCALE` aus `.env`
+
+**SetCacheHeaders Middleware:**
+- Setzt `Cache-Control`-Header für öffentliche Seiten
+- Ermöglicht effizientes Browser-Caching und CDN-Caching
 
 ### 5.4 Routes
 
 ```php
-// Web Routes — Öffentlich
-Route::get('/', [HomeController::class, 'index'])->name('home');
-Route::get('/projekt', [ProjectController::class, 'show'])->name('project');
-Route::get('/module', [ModuleController::class, 'index'])->name('modules');
-Route::get('/module/{slug}', [ModuleController::class, 'show'])->name('modules.show');
+// ============================================
+// Öffentliche Routen
+// ============================================
 
-Route::get('/anleitung', [GuideController::class, 'index'])->name('guides');
-Route::get('/anleitung/{category}', [GuideController::class, 'byCategory'])->name('guides.category');
-Route::get('/anleitung/{slug}', [GuideController::class, 'show'])->name('guides.show');
+// Startseite (ohne Locale-Präfix – Sprachauswahl)
+Route::get('/', function () {
+    return view('language-select');
+})->name('home');
 
-Route::get('/tutorial', [TutorialController::class, 'index'])->name('tutorials');
-Route::get('/tutorial/{slug}', [TutorialController::class, 'show'])->name('tutorials.show');
+// Öffentliche Routen mit Sprach-Präfix
+Route::prefix('{locale}')->where(['locale' => implode('|', $locales)])->group(function () {
+    Route::get('/', function () {
+        return view('welcome');
+    })->name('home.locale');
 
-Route::get('/suche', [SearchController::class, 'search'])->name('search');
+    // Anleitungen
+    Route::get('/anleitungen', [GuideController::class, 'index'])->name('guides.index');
+    Route::get('/anleitungen/{slug}/pdf', [GuideController::class, 'pdf'])->name('guides.pdf');
+    Route::get('/anleitungen/{slug}', [GuideController::class, 'show'])->name('guides.show');
 
-// Auth-Routes (Laravel Breeze)
-Route::middleware(['auth'])->group(function () {
-    Route::post('/kommentare', [CommentController::class, 'store'])->name('comments.store');
-    Route::post('/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
-    Route::post('/bewertung', [RatingController::class, 'store'])->name('ratings.store');
+    // Tutorials
+    Route::get('/tutorials', [TutorialController::class, 'index'])->name('tutorials.index');
+    Route::get('/tutorials/{slug}', [TutorialController::class, 'show'])->name('tutorials.show');
+
+    // Statische Seiten
+    Route::get('/seite/{slug}', [PageController::class, 'show'])->name('pages.show');
+
+    // Suche
+    Route::get('/suche', [SearchController::class, 'search'])->name('search');
+
+    // Kommentare (authentifizierte Benutzer)
+    Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified'])->group(function () {
+        Route::post('/anleitungen/{guide:slug}/kommentare', [CommentController::class, 'store'])
+            ->name('guides.comments.store');
+        Route::delete('/kommentare/{comment}', [CommentController::class, 'destroy'])
+            ->name('comments.destroy');
+    });
+
+    // Tutorial-Fortschritt (authentifizierte Benutzer)
+    Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified'])->group(function () {
+        Route::post('/tutorials/{slug}/progress', [TutorialController::class, 'updateProgress'])
+            ->name('tutorials.progress');
+        Route::post('/tutorials/{slug}/complete', [TutorialController::class, 'complete'])
+            ->name('tutorials.complete');
+    });
 });
 
-// Admin-Routes — Geschützt
-Route::middleware(['auth', 'role:admin,editor'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    
-    Route::resource('guides', GuideAdminController::class);
-    Route::resource('tutorials', TutorialAdminController::class);
-    Route::resource('tutorials.steps', TutorialStepAdminController::class)->shallow();
-    Route::post('tutorials/{tutorial}/steps/{step}/hotspots', [TutorialHotspotAdminController::class, 'store'])->name('tutorials.hotspots.store');
-    Route::delete('hotspots/{hotspot}', [TutorialHotspotAdminController::class, 'destroy'])->name('hotspots.destroy');
-    Route::resource('pages', PageAdminController::class);
-    Route::resource('users', UserAdminController::class);
-    
+// Dashboard (Jetstream Login-Redirect Ziel)
+Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified'])->group(function () {
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    })->name('dashboard');
+});
+
+// ============================================
+// Admin-Panel (geschützt, ohne Sprach-Präfix)
+// ============================================
+
+Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified'])
+    ->prefix('admin')->name('admin.')->group(function () {
+
+    // Dashboard mit Statistiken
+    Route::get('/dashboard', [AdminStatisticsController::class, 'index'])->name('dashboard');
+
+    // CRUD-Ressourcen
+    Route::resource('categories', AdminCategoryController::class);
+    Route::resource('guides', AdminGuideController::class);
+    Route::resource('tutorials', AdminTutorialController::class);
+    Route::resource('pages', AdminPageController::class);
+
+    // Bild-Upload
+    Route::post('guides/{guide:id}/images/step', [AdminImageController::class, 'storeGuideImage']);
+    Route::post('guides/{guide:id}/images', [AdminImageController::class, 'storeGuideGlobalImage']);
+    Route::delete('guide-images/{image}', [AdminImageController::class, 'destroyGuideImage']);
+    Route::post('guides/{guide:id}/screenshot', [AdminImageController::class, 'storeGuideScreenshot']);
+    Route::post('tutorials/{tutorial:id}/screenshot', [AdminImageController::class, 'storeTutorialScreenshot']);
+    Route::delete('tutorials/{tutorial:id}/steps/{step}/screenshot', [AdminImageController::class, 'destroyTutorialScreenshot']);
+    Route::delete('tutorials/{tutorial:id}/og-image', [AdminTutorialController::class, 'destroyOgImage']);
+
+    // Kommentar-Moderation
+    Route::get('/comments', [CommentController::class, 'index'])->name('comments.index');
+    Route::patch('/comments/{comment}/approve', [CommentController::class, 'approve'])->name('comments.approve');
+    Route::patch('/comments/{comment}/reject', [CommentController::class, 'reject'])->name('comments.reject');
+
     // Übersetzungs-Verwaltung
     Route::get('/translations', [AdminTranslationController::class, 'index'])->name('translations.index');
     Route::get('/translations/{type}', [AdminTranslationController::class, 'show'])->name('translations.show');
     Route::post('/translations/{type}/{id}/store', [AdminTranslationController::class, 'store'])->name('translations.store');
     Route::delete('/translations/{type}/{id}/{locale}/destroy', [AdminTranslationController::class, 'destroy'])->name('translations.destroy');
-    
-    Route::get('/kommentare', [CommentModerationController::class, 'index'])->name('comments.index');
-    Route::patch('/kommentare/{id}/status', [CommentModerationController::class, 'updateStatus'])->name('comments.status');
-    Route::delete('/kommentare/{id}', [CommentModerationController::class, 'destroy'])->name('comments.destroy');
+
+    // Schritt-Übersetzungen (AJAX)
+    Route::post('guides/{guide}/steps/{stepId}/translations', [AdminStepTranslationController::class, 'storeGuideStep']);
+    Route::delete('guides/{guide}/steps/{stepId}/translations/{locale}', [AdminStepTranslationController::class, 'destroyGuideStep']);
+    Route::post('tutorials/{tutorial:id}/steps/{stepId}/translations', [AdminStepTranslationController::class, 'storeTutorialStep']);
+    Route::delete('tutorials/{tutorial:id}/steps/{stepId}/translations/{locale}', [AdminStepTranslationController::class, 'destroyTutorialStep']);
+
+    // KI-Integration (OpenAI API)
+    Route::post('/ai/generate-description', [AdminAIController::class, 'generateDescription']);
+    Route::post('/ai/generate-translation', [AdminAIController::class, 'generateTranslation']);
+    Route::post('/ai/generate-content', [AdminAIController::class, 'generateContent']);
+
+    // Multi-Projekt: Projekte verwalten
+    Route::resource('projects', AdminProjectController::class);
+    Route::patch('projects/{project}/terms', [AdminProjectController::class, 'updateTerms']);
+    Route::post('projects/{project}/terms/import', [AdminProjectController::class, 'importTerms']);
+    Route::get('projects/{project}/terms/suggest', [AdminProjectController::class, 'suggestTerms']);
+    Route::get('projects/{project}/terms/export/json', [AdminProjectController::class, 'exportTermsJson']);
+    Route::get('projects/{project}/terms/export/csv', [AdminProjectController::class, 'exportTermsCsv']);
+    Route::post('projects/{project}/terms/import/json', [AdminProjectController::class, 'importTermsJson']);
+    Route::post('projects/{project}/terms/import/csv', [AdminProjectController::class, 'importTermsCsv']);
+    Route::post('projects/{project}/guides', [AdminProjectController::class, 'assignGuides']);
+    Route::post('projects/{project}/tutorials', [AdminProjectController::class, 'assignTutorials']);
+
+    // Projekt-spezifische Screenshots
+    Route::get('projects/{project}/guide-screenshots', [AdminProjectController::class, 'getGuideScreenshots']);
+    Route::get('projects/{project}/tutorial-screenshots', [AdminProjectController::class, 'getTutorialScreenshots']);
+    Route::post('projects/{project}/guide-screenshots', [AdminProjectController::class, 'storeGuideScreenshot']);
+    Route::post('projects/{project}/tutorial-screenshots', [AdminProjectController::class, 'storeTutorialScreenshot']);
+    Route::delete('projects/{project}/guide-screenshots/{guideStepId}', [AdminProjectController::class, 'destroyGuideScreenshot']);
+    Route::delete('projects/{project}/tutorial-screenshots/{tutorialStepId}', [AdminProjectController::class, 'destroyTutorialScreenshot']);
+
+    // Projekt-User-Zuweisungen
+    Route::post('projects/{project}/users', [AdminProjectController::class, 'assignUsers']);
+    Route::delete('projects/{project}/users/{user}', [AdminProjectController::class, 'removeUser']);
 });
+
+// ============================================
+// API-Endpunkte (öffentlich, JSON)
+// ============================================
+
+Route::prefix('api')->name('api.')->group(function () {
+    Route::get('/guides', [ApiController::class, 'guides']);
+    Route::get('/guides/{guide:slug}', [ApiController::class, 'guideShow']);
+    Route::get('/tutorials', [ApiController::class, 'tutorials']);
+    Route::get('/tutorials/{tutorial:slug}', [ApiController::class, 'tutorialShow']);
+    Route::get('/categories', [ApiController::class, 'categories']);
+    Route::get('/search', [ApiController::class, 'search']);
+});
+
+// Health Check (Monitoring, Load Balancer)
+Route::get('/health', [HealthController::class, 'check'])->name('health.check');
+Route::get('/ping', [HealthController::class, 'ping'])->name('health.ping');
 ```
+
+**Wichtige Route-Muster:**
+- `{guide:id}` und `{tutorial:id}` erzwingen ID-basiertes Model Binding (wegen `getRouteKeyName() = 'slug'`)
+- `{guide:slug}` und `{tutorial:slug}` verwenden Slug-basiertes Model Binding
+- Admin-Routes verwenden Jetstream-Auth-Middleware (`auth:sanctum`, `verified`)
+- Öffentliche Routen mit `{locale}`-Präfix unterstützen Mehrsprachigkeit
+- API-Endpunkte sind öffentlich und liefern JSON-Antworten mit Projekt-Filter
 
 ---
 
 ## 6. Implementierungsplan
 
-### Phase 1: Grundgerüst (Woche 1–2)
+### Phase 1: Grundgerüst (Abgeschlossen ✓)
 
 **Ziel:** Laravel-Projekt mit Basis-Struktur und Authentifizierung
 
 - [x] Laravel-Installation in `Webseitevereinsverwaltung/`
 - [x] Datenbank-Konfiguration (`.env` für entfernten Server vorbereiten)
-- [x] Laravel Jetstream für Authentifizierung (mit Teams)
+- [x] Laravel Jetstream für Authentifizierung (mit Teams, 2FA, Passkeys)
 - [x] Basis-Layout mit Navigation und Footer (Tailwind CSS)
 - [x] Rollen-Middleware implementieren
 - [x] Migrationen für Guide-Tabellen erstellen (guides, guide_steps, guide_images)
 - [x] Migrationen für Tutorial-Tabellen erstellen (tutorials, tutorial_steps, tutorial_hotspots)
-- [ ] Seeder für Demo-Kategorien und Admin-Benutzer
-- [ ] Migrationen für alle restlichen Tabellen (comments, feedback, ratings, etc.)
+- [x] Migrationen für alle restlichen Tabellen (comments, feedback, ratings, etc.)
+- [x] Seeder für Demo-Kategorien und Admin-Benutzer (DefaultSeeder)
 
-### Phase 2: Inhaltverwaltung (Woche 3–4)
+### Phase 2: Inhaltverwaltung (Abgeschlossen ✓)
 
 **Ziel:** CRUD für Anleitungen, Tutorials und Seiten
 
@@ -907,24 +1084,24 @@ Route::middleware(['auth', 'role:admin,editor'])->prefix('admin')->name('admin.'
 - [x] Schritt-Bilder (Bilder pro Schritt mit AJAX-Upload)
 - [x] Globale Bilder (Bilder auf Anleitungsebene)
 - [x] Bild-Löschung per AJAX
-- [x] Mehrsprachige Schritt-Übersetzungen (AJAX-basiert)
+- [x] Mehrsprachige Schritt-Übersetzungen (AJAX-basiert, AdminStepTranslationController)
 - [x] Übersetzungssystem für Inhalte (polymorphes ContentTranslation-Modell)
 - [x] Admin-Panel für Übersetzungen (Modal-basiert, Multiple-Form-Ansatz)
-- [x] KI-Übersetzung einzelner Felder (OpenAI API Integration)
-- [ ] Admin-Panel für Tutorial-CRUD
-- [ ] Admin-Panel für Tutorial-Schritte
-- [ ] **Screenshot-Upload mit Hotspot-Markierung** (Canvas-basiert)
+- [x] KI-Übersetzung einzelner Felder (OpenAI API Integration via AdminAIController)
+- [x] Admin-Panel für Tutorial-CRUD (inkl. SEO-Einstellungen, OG-Bild)
+- [x] Admin-Panel für Tutorial-Schritte
+- [x] **Screenshot-Upload mit Hotspot-Markierung** (Canvas-basiert)
 - [x] Hotspot-Koordinaten speichern (x, y, radius, type) — TutorialHotspot-Modell
-- [ ] Tutorial-Vorschau im Admin-Panel
-- [ ] Admin-Panel für Page-CRUD
+- [x] Tutorial-Vorschau im Admin-Panel
+- [x] Admin-Panel für Page-CRUD
 - [ ] Tag-System implementieren
 - [ ] Kategorien-Hierarchie (Parent-Child)
 
-### Phase 3: Öffentliches Frontend (Woche 5–6)
+### Phase 3: Öffentliches Frontend (Teilweise abgeschlossen)
 
 **Ziel:** Alle öffentlichen Seiten und Suchfunktion
 
-- [x] Startseite mit Projektübersicht
+- [x] Startseite mit Sprachauswahl
 - [x] Projektbeschreibung-Seite
 - [x] Module-Übersicht und Detailseiten
 - [x] Anleitung-Übersicht mit Filter und Kategorien
@@ -940,25 +1117,25 @@ Route::middleware(['auth', 'role:admin,editor'])->prefix('admin')->name('admin.'
 - [ ] Suchfunktion mit Laravel Scout
 - [ ] Autocomplete-Vorschläge
 
-### Phase 4: Interaktion (Woche 7–8)
+### Phase 4: Interaktion (Teilweise abgeschlossen)
 
 **Ziel:** Kommentare, Bewertungen und Feedback
 
-- [ ] Kommentar-System mit Verschachtelung
+- [x] Kommentar-System mit Moderation (Genehmigen/Ablehnen)
+- [ ] Verschachtelte Kommentare (Antworten auf Kommentare)
 - [ ] Bewertungs-System (Sterne)
 - [ ] Feedback-Formular
-- [ ] Kommentar-Moderation im Admin-Panel
 - [ ] E-Mail-Benachrichtigungen bei neuen Kommentaren (optional)
 
-### Phase 5: Feinschliff (Woche 9–10)
+### Phase 5: Feinschliff (In Arbeit)
 
 **Ziel:** Design, Performance und Deployment-Vorbereitung
 
 - [ ] Responsive Design testen und anpassen
 - [ ] Barrierefreiheit prüfen
 - [x] SEO-Meta-Tags und Open Graph (Tutorials: meta_title, meta_description, og_image mit Datei-Upload)
-- [ ] Caching-Strategie implementieren
-- [ ] Demo-Seeder mit Beispiel-Inhalten
+- [ ] Caching-Strategie implementieren (SetCacheHeaders Middleware vorhanden)
+- [x] Demo-Seeder mit Beispiel-Inhalten (DefaultSeeder + DemoContentSeeder)
 - [ ] Deployment-Dokumentation
 
 ---
@@ -987,7 +1164,8 @@ Die Webseite soll **parallel zur Projektentwicklung** aktualisiert werden. Folge
 | Komponente | Technologie |
 |---|---|
 | **Framework** | Laravel 12 (PHP 8.3) |
-| **Authentifizierung** | Laravel Breeze (einfach) oder Jetstream (vollständig) |
+| **Authentifizierung** | Laravel Jetstream (mit Teams, 2FA, Passkeys) |
+| **API-Auth** | Laravel Sanctum |
 | **Frontend** | Blade + Tailwind CSS + Alpine.js |
 | **Datenbank** | MySQL 8+ (kann auf entferntem Server liegen) |
 | **Suche** | Laravel Scout + MySQL Full-Text (oder Meilisearch) |
@@ -998,6 +1176,9 @@ Die Webseite soll **parallel zur Projektentwicklung** aktualisiert werden. Folge
 | **Tutorial-Player** | JavaScript-Player mit Screenshot-Overlay, Klick-Erkennung, Fortschrittsanzeige |
 | **Cache** | Laravel Cache (File oder Redis) |
 | **Queue** | Laravel Queue für E-Mail-Benachrichtigungen |
+| **KI-Integration** | OpenAI API (Beschreibung, Übersetzung, Inhaltsgenerierung) |
+| **Multi-Projekt** | Eigenes System — Platzhalter-Ersetzung, Domain/Subdomain-Erkennung, projekt-spezifische Screenshots |
+| **Health Check** | HealthController für Monitoring und Load Balancer |
 
 ---
 
@@ -1176,6 +1357,35 @@ Reservierte Subdomains (`www`, `api`, `admin`, `mail`, `ftp`, `smtp`, `pop`, `im
 - `User.php` – `projects()` belongsToMany + `hasProjectRole()`, `isProjectAdmin()`, `canEditProject()`
 - `Project.php` – `users()` belongsToMany mit Rollen-Unterstützung
 
+### 11.6 Screenshot-Bereichsauswahl (Implementiert ✓)
+
+Auf der Projekt-Bearbeitungsseite (`/admin/projects/{id}/edit`, Tab "Screenshots") kann statt dem klassischen Datei-Upload ein **Screenshot mit Bereichsauswahl** erstellt werden. Die Funktionalität nutzt die Browser Screen Capture API und ermöglicht es, einen Bereich des Bildschirms visuell auszuwählen und direkt als projekt-spezifischen Screenshot hochzuladen.
+
+**Funktionsumfang:**
+- **Screen Capture API:** `navigator.mediaDevices.getDisplayMedia()` erfasst den Bildschirm als Videostream
+- **Visuelle Bereichsauswahl:** Nutzer zieht ein Rechteck auf dem Canvas – der ausgewählte Bereich wird als Screenshot gespeichert
+- **Steuerung:** Start/Stop-Buttons, Timer-Anzeige, Bereichsauswahl-Modus mit Maus-Events (mousedown, mousemove, mouseup)
+- **Upload via fetch:** Asynchroner Upload ohne Seiten-Neuladen – bleibt auf dem Tab "Screenshots"
+- **Support für Guides und Tutorials:** Separate Funktionen für Guide-Schritte (`startProjectGuideScreenshotCapture`) und Tutorial-Schritte (`startProjectTutorialScreenshotCapture`)
+
+**JavaScript-Komponenten:**
+- `screenshot-capture.js` – Zentrale Datei mit allen Screenshot-Funktionen:
+  - `startProjectGuideScreenshotCapture(projectId, guideId, stepId)` – Startet Screen Capture für Guide-Schritt
+  - `uploadProjectGuideScreenshotFromBlob(blob, projectId, guideId, stepId)` – Upload des Guide-Screenshots
+  - `startProjectTutorialScreenshotCapture(projectId, tutorialId, stepId)` – Startet Screen Capture für Tutorial-Schritt
+  - `uploadProjectTutorialScreenshotFromBlob(blob, projectId, tutorialId, stepId)` – Upload des Tutorial-Screenshots
+  - `startGuideScreenshotCapture(guideId, stepId)` – Bestehende Funktion für Master-Guide-Screenshots
+  - `startTutorialScreenshotCapture(tutorialId, stepId)` – Bestehende Funktion für Master-Tutorial-Screenshots
+
+**Controller-Methoden:**
+- `AdminProjectController@storeGuideScreenshot()` – Speichert projekt-spezifischen Guide-Screenshot, gibt JSON mit `url`, `guide_id`, `step_id` zurück
+- `AdminProjectController@storeTutorialScreenshot()` – Speichert projekt-spezifischen Tutorial-Screenshot, gibt JSON mit `url`, `tutorial_id`, `step_id` zurück
+- `$project->load('guides')` / `$project->load('tutorials')` vor der `contains()`-Prüfung, um Lazy-Loading-Problem zu vermeiden
+
+**Admin-View-Integration:**
+- In `admin/projects/edit.blade.php` (Tab "Screenshots") neben jedem klassischen Datei-Upload ein grüner Button "📸 Screenshot mit Bereichsauswahl"
+- Nach erfolgreichem Upload wird die Seite mit `?tab=screenshots` neu geladen, sodass der Benutzer auf dem Screenshots-Tab bleibt
+
 ### 11.7 Projekt-User-Zuordnung (Rollen-basiert)
 
 Jedes Projekt kann einem oder mehreren Users zugeordnet werden. Ein User kann mehrere Projekte verwalten. Die Zuordnung erfolgt über die Pivot-Tabelle `project_user` mit drei Rollen:
@@ -1269,6 +1479,8 @@ View mit Platzhaltern ersetzt + projekt-spezifischen Screenshots
 - [x] JavaScript-Tabs in `admin/projects/edit.blade.php`
 - [x] DemoContentSeeder – 4 Beispiel-Guides und 2 Beispiel-Tutorials mit Platzhaltern
 - [x] Screenshot-Upload-UI im Admin-Panel – projekt-spezifische Screenshots pro Guide- und Tutorial-Schritt
+- [x] Screenshot-Bereichsauswahl – Screen Capture API mit visuellem Rechteck-Auswahl-Tool auf Projekt-Bearbeitungsseite
+- [x] Screenshot-Inline-Upload – Upload via fetch ohne Seiten-Neuladen, bleibt auf Tab "Screenshots"
 - [x] Projekt-User-Zuordnung – Many-to-Many mit Rollen (Admin, Editor, Viewer)
 - [x] ProjectPolicy – Rollen-basierte Berechtigungsprüfung (view, update, delete, editTerms, manageScreenshots, manageUsers, manageContent)
 - [x] Policy-Integration in AdminProjectController – alle 20 Methoden mit `$this->authorize()` gesichert
@@ -1322,7 +1534,107 @@ Die `DatabaseSeeder.php` orchestriert die Seeders in dieser Reihenfolge:
 
 ---
 
-### 11.12 Umsetzungsplan
+### 11.12 Hotspot-Link-Anpassung (Implementiert ✓)
+
+Hotspot-Links in Tutorials werden automatisch an das aktuelle Projekt angepasst. Der Redakteur trägt im Admin-Panel konkrete Links ein (z. B. `https://www.ssv-datteln.de/login`), und der Code wandelt sie automatisch in projekt-spezifische Links um.
+
+#### Zwei Anpassungs-Mechanismen
+
+| Mechanismus | Beschreibung | Beispiel |
+|---|---|---|
+| **Domain-Rewriting** | Ersetzt die Quelldomain (`source_domain`) durch die Projekt-Domain | `https://www.ssv-datteln.de/login` → `https://sportverein.127.0.0.1:8000/login` |
+| **Automatische Platzhalter-Erkennung** | Erkennt Werte, die mit Platzhalter-Default-Werten übereinstimmen, und wandelt sie in Platzhalter um | `https://example.de/Veranstaltungen` → `https://example.de/{{events}}` → projekt-spezifisch |
+
+#### Domain-Rewriting
+
+**Konfiguration:** Im Projekt-Edit-Formular (`/admin/projects/{id}/edit`, Tab "Grunddaten", Bereich "Domain & Subdomain") trägt der Admin die **Quelldomain** (`source_domain`) ein — die URL der externen Anwendung, auf die die Hotspot-Links ursprünglich verweisen.
+
+**Ablauf:**
+1. Redakteur trägt Hotspot-Link ein: `https://www.ssv-datteln.de/mitglieder`
+2. Projekt hat `source_domain` = `https://www.ssv-datteln.de` und `subdomain` = `sportverein`
+3. Beim Anzeigen des Tutorials ersetzt `PlaceholderService::rewriteDomain()` die Quelldomain durch die berechnete Ziel-Domain
+4. Ergebnis: `https://sportverein.127.0.0.1:8000/mitglieder`
+
+**Ziel-Domain-Berechnung (`getProjectTargetDomain`):**
+- Bei **Subdomain**: `subdomain` + Hauptdomain aus `APP_URL` (z. B. `sportverein.127.0.0.1:8000`)
+- Bei **Domain**: Direkt aus `project.domain` (z. B. `klickdoc.ssv-datteln.de`)
+- Protokoll (http/https) wird aus `APP_URL` oder der Projekt-Domain übernommen
+
+**Methoden in `PlaceholderService`:**
+- `rewriteDomain($url, $sourceDomain, $targetDomain)` — Ersetzt Domain in einer URL
+- `rewriteHotspotDomains($hotspotData, $project)` — Wendet Domain-Rewriting auf Hotspot-Links an
+- `getProjectTargetDomain($project)` — Berechnet die Ziel-Domain eines Projekts
+
+#### Automatische Platzhalter-Erkennung
+
+**Funktionsweise:** Beim Speichern eines Hotspot-Links im Admin-Panel erkennt `PlaceholderService::autoDetectPlaceholders()` automatisch Werte, die mit den Default-Werten der Platzhalter-Definitionen übereinstimmen, und wandelt sie in Platzhalter um.
+
+**Beispiel:**
+1. Redakteur trägt ein: `https://example.de/Veranstaltungen`
+2. System erkennt "Veranstaltungen" als Default-Wert von `{{events}}`
+3. Gespeichert wird: `https://example.de/{{events}}`
+4. Beim Anzeigen im Tutorial wird `{{events}}` zum projekt-spezifischen Wert (z. B. "Events" im englischen Projekt)
+
+**Wichtige Regeln:**
+- Bereits bestehende Platzhalter (`{{events}}`) werden nicht doppelt verarbeitet
+- Längere Default-Werte werden zuerst ersetzt, um Teilstring-Kollisionen zu vermeiden (z. B. "Veranstaltungen" vor "Veranstaltung")
+- Die Erkennung ist locale-sensitiv: "Veranstaltungen" (de) und "Events" (en) werden beide erkannt
+
+**Methoden in `PlaceholderService`:**
+- `autoDetectPlaceholders($text, $locale)` — Erkennt Default-Werte und wandelt sie in Platzhalter um
+- `autoDetectHotspotPlaceholders($hotspotData, $locale)` — Wendet autoDetect auf link, label, description an
+- `resolveWithDefaults($text, $locale)` — Wandelt Platzhalter zurück zu Default-Werten (für Admin-Anzeige)
+- `resolveHotspotWithDefaults($hotspotData, $locale)` — Wandelt Hotspot-Platzhalter zurück zu Default-Werten
+
+#### Validierung (`ValidHotspotLink` Rule)
+
+Die Custom Validation Rule `App\Rules\ValidHotspotLink` stellt sicher, dass Hotspot-Links gültig sind:
+
+| Format | Beispiel | Gültig? |
+|---|---|---|
+| Absolute URL (https) | `https://www.ssv-datteln.de/login` | ✓ |
+| Absolute URL (http) | `http://example.com/seite` | ✓ |
+| Relativer Pfad | `/login` | ✓ |
+| Query-Parameter | `?status=offen` | ✓ |
+| Fragment | `#section` | ✓ |
+| Protokoll-unabhängig | `//example.com/seite` | ✓ |
+| Platzhalter-URL | `https://example.de/{{events}}` | ✓ |
+| Leerwert | `(leer)` | ✓ (nullable) |
+| Ungültig | `login` (ohne `/`) | ✗ |
+
+#### Datenfluss (End-to-End)
+
+```
+Redakteur trägt Link ein
+        ↓
+AdminTutorialController::store/update()
+        ↓
+ValidHotspotLink Rule prüft Format
+        ↓
+PlaceholderService::autoDetectHotspotPlaceholders()
+  (erkennt Default-Werte → Platzhalter)
+        ↓
+Speichern in DB (z.B. "https://example.de/{{events}}")
+        ↓
+[Bei Anzeige im Admin-Panel]
+PlaceholderService::resolveHotspotWithDefaults()
+  (Platzhalter → Default-Werte für Anzeige)
+        ↓
+[Bei Anzeige im Tutorial]
+PlaceholderService::resolve() + rewriteHotspotDomains()
+  (Platzhalter → projekt-spezifische Werte + Domain-Rewriting)
+        ↓
+Nutzer sieht projekt-spezifischen Link
+```
+
+#### Datenbank
+
+- `projects.source_domain` — Quelldomain für Domain-Rewriting (nullable string)
+- `tutorial_hotspots.link` — Hotspot-Link (max 2048 Zeichen, unterstützt Platzhalter)
+
+---
+
+### 11.13 Umsetzungsplan
 
 Der Umsetzungsplan beschreibt die schrittweise Einführung des Multi-Projekt-Systems in der Produktionsumgebung.
 
@@ -1365,8 +1677,9 @@ Der Umsetzungsplan beschreibt die schrittweise Einführung des Multi-Projekt-Sys
 | 4.4 | API-Tests mit Projekt-Kontext | ✓ |
 | 4.5 | Demo-Projekte mit Beispiel-Inhalten befüllen | ✓ |
 | 4.6 | Screenshot-Upload-UI im Admin-Panel | ✓ |
-| 4.7 | ProjectPolicy – Rollen-basierte Berechtigungsprüfung | ✓ |
-| 4.8 | Policy-Tests (25 Tests) | ✓ |
+| 4.7 | Screenshot-Bereichsauswahl – Screen Capture API auf Projekt-Bearbeitungsseite | ✓ |
+| 4.8 | ProjectPolicy – Rollen-basierte Berechtigungsprüfung | ✓ |
+| 4.9 | Policy-Tests (25 Tests) | ✓ |
 
 #### Phase 5: Produktionseinführung (Nächste Schritte)
 

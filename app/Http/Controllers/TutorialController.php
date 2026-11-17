@@ -93,15 +93,22 @@ class TutorialController extends Controller
                 'warning' => $placeholderService->resolve($step->getTranslationAttribute('warning', $locale) ?? $step->warning, $project, $locale),
                 'screenshot_path' => $screenshotService->getTutorialStepScreenshot($step, $project),
                 'hotspots' => $step->hotspots->map(function ($h) use ($placeholderService, $project, $locale) {
-                    return [
+                    $hotspotData = [
                         'id' => $h->id,
                         'position_x' => $h->position_x,
                         'position_y' => $h->position_y,
                         'radius' => $h->radius ?? 30,
                         'label' => $placeholderService->resolve($h->label, $project, $locale),
-                        'link' => $h->link,
+                        'link' => $placeholderService->resolve($h->link, $project, $locale),
                         'is_clickable' => $h->is_clickable,
                     ];
+                    // Domain-Rewriting: Quelldomain durch Projekt-Domain ersetzen
+                    $hotspotData['link'] = $placeholderService->rewriteDomain(
+                        $hotspotData['link'],
+                        $project?->source_domain,
+                        $placeholderService->getProjectTargetDomain($project)
+                    );
+                    return $hotspotData;
                 })->values()->all(),
             ];
         })->values()->all();

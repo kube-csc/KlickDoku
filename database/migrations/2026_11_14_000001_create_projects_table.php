@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->string('subdomain')->nullable()->unique();
             $table->string('domain')->nullable();
+            $table->string('source_domain')->nullable();
             $table->string('app_name');
             $table->string('club_name');
             $table->string('logo_path')->nullable();

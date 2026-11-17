@@ -8,7 +8,9 @@ use App\Models\Tag;
 use App\Models\Tutorial;
 use App\Models\TutorialStep;
 use App\Models\TutorialHotspot;
+use App\Services\PlaceholderService;
 use App\Helpers\CacheHelper;
+use App\Rules\ValidHotspotLink;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -50,7 +52,7 @@ class AdminTutorialController extends Controller
             'steps.*.hotspots' => 'nullable|array',
             'steps.*.hotspots.*.selector' => 'nullable|string',
             'steps.*.hotspots.*.label' => 'nullable|string',
-            'steps.*.hotspots.*.link' => 'nullable|string|max:255|sometimes',
+            'steps.*.hotspots.*.link' => ['nullable', 'string', 'max:2048', new ValidHotspotLink()],
             'steps.*.hotspots.*.hotspot_type' => 'nullable|string|sometimes',
             'steps.*.hotspots.*.position_x' => 'nullable|integer|sometimes',
             'steps.*.hotspots.*.position_y' => 'nullable|integer|sometimes',
@@ -138,7 +140,10 @@ class AdminTutorialController extends Controller
 
                 // Hotspots erstellen
                 if (!empty($step['hotspots'])) {
+                    $placeholderService = app(PlaceholderService::class);
                     foreach ($step['hotspots'] as $hotspot) {
+                        // Automatische Platzhalter-Erkennung anwenden
+                        $hotspot = $placeholderService->autoDetectHotspotPlaceholders($hotspot);
                         TutorialHotspot::create([
                             'tutorial_step_id' => $tutorialStep->id,
                             'selector' => $hotspot['selector'],
@@ -185,7 +190,7 @@ class AdminTutorialController extends Controller
             'steps.*.hotspots' => 'nullable|array',
             'steps.*.hotspots.*.selector' => 'nullable|string',
             'steps.*.hotspots.*.label' => 'nullable|string',
-            'steps.*.hotspots.*.link' => 'nullable|string|max:255|sometimes',
+            'steps.*.hotspots.*.link' => ['nullable', 'string', 'max:2048', new ValidHotspotLink()],
             'steps.*.hotspots.*.hotspot_type' => 'nullable|string|sometimes',
             'steps.*.hotspots.*.position_x' => 'nullable|integer|sometimes',
             'steps.*.hotspots.*.position_y' => 'nullable|integer|sometimes',
@@ -287,7 +292,10 @@ class AdminTutorialController extends Controller
 
                 // Hotspots erstellen
                 if (!empty($step['hotspots'])) {
+                    $placeholderService = app(PlaceholderService::class);
                     foreach ($step['hotspots'] as $hotspot) {
+                        // Automatische Platzhalter-Erkennung anwenden
+                        $hotspot = $placeholderService->autoDetectHotspotPlaceholders($hotspot);
                         TutorialHotspot::create([
                             'tutorial_step_id' => $tutorialStep->id,
                             'selector' => $hotspot['selector'],

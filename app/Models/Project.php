@@ -14,6 +14,7 @@ class Project extends Model
         'slug',
         'subdomain',
         'domain',
+        'source_domain',
         'app_name',
         'club_name',
         'logo_path',

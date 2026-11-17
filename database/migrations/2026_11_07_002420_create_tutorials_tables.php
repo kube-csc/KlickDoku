@@ -54,7 +54,7 @@ return new class extends Migration
             $table->integer('position_y');
             $table->integer('radius')->default(20);
             $table->string('label')->nullable();
-            $table->string('link')->nullable();
+            $table->string('link', 2048)->nullable();
             $table->enum('cursor_type', ['arrow', 'pointer', 'hand', 'text', 'context_menu'])->default('pointer');
             $table->integer('click_count')->default(1);
             $table->boolean('is_clickable')->default(true);

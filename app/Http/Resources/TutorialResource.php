@@ -62,17 +62,24 @@ class TutorialResource extends JsonResource
                         $data['screenshot'] = asset($screenshotPath);
                         $data['screenshot_is_project_specific'] = (bool)$p;
                     }
-                    // Hotspots mit Platzhalter-Ersetzung
+                    // Hotspots mit Platzhalter-Ersetzung und Domain-Rewriting
                     if ($step->relationLoaded('hotspots')) {
                         $data['hotspots'] = $step->hotspots->map(function ($hs) use ($ps, $p) {
-                            return [
+                            $hotspotData = [
                                 'id' => $hs->id,
                                 'x' => $hs->x,
                                 'y' => $hs->y,
                                 'label' => $ps->resolve($hs->label, $p),
-                                'link' => $hs->link,
+                                'link' => $ps->resolve($hs->link, $p),
                                 'description' => $ps->resolve($hs->description, $p),
                             ];
+                            // Domain-Rewriting: Quelldomain durch Projekt-Domain ersetzen
+                            $hotspotData['link'] = $ps->rewriteDomain(
+                                $hotspotData['link'],
+                                $p?->source_domain,
+                                $ps->getProjectTargetDomain($p)
+                            );
+                            return $hotspotData;
                         });
                     }
                     return $data;

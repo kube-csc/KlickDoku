@@ -265,11 +265,11 @@
                                            placeholder="CSS-Selector (z.B. #button)"
                                            class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
                                     <input type="text" name="steps[{{ $index }}][hotspots][{{ $hIndex }}][label]"
-                                           value="{{ old("steps.$index.hotspots.$hIndex.label", $hotspot->label) }}"
+                                           value="{{ old("steps.$index.hotspots.$hIndex.label", app(\App\Services\PlaceholderService::class)->resolveWithDefaults($hotspot->label)) }}"
                                            placeholder="Label"
                                            class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
                                     <input type="text" name="steps[{{ $index }}][hotspots][{{ $hIndex }}][link]"
-                                           value="{{ old("steps.$index.hotspots.$hIndex.link", $hotspot->link) }}"
+                                           value="{{ old("steps.$index.hotspots.$hIndex.link", app(\App\Services\PlaceholderService::class)->resolveWithDefaults($hotspot->link)) }}"
                                            placeholder="Link (optional)"
                                            class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
                                     <span class="hotspot-pos-display text-xs text-gray-500 whitespace-nowrap" data-hotspot="{{ $hIndex }}">
