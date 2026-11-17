@@ -119,4 +119,14 @@ class Guide extends Model
             });
         });
     }
+
+    public function projects()
+    {
+        return $this->belongsToMany(Project::class, 'guide_project');
+    }
+
+    public function scopeForProject($query, Project $project)
+    {
+        return $query->whereHas('projects', fn($q) => $q->where('projects.id', $project->id));
+    }
 }

@@ -2,22 +2,40 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Project;
+use App\Services\PlaceholderService;
+use App\Services\ProjectScreenshotService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class GuideResource extends JsonResource
 {
+    protected ?Project $project;
+    protected PlaceholderService $placeholderService;
+    protected ProjectScreenshotService $screenshotService;
+
+    public function __construct($resource)
+    {
+        parent::__construct($resource);
+        $this->project = request()->attributes->get('project');
+        $this->placeholderService = app(PlaceholderService::class);
+        $this->screenshotService = app(ProjectScreenshotService::class);
+    }
+
     /**
      * Transform the resource into an array.
      */
     public function toArray(Request $request): array
     {
+        $ps = $this->placeholderService;
+        $p = $this->project;
+
         return [
             'id' => $this->id,
-            'title' => $this->title,
+            'title' => $ps->resolve($this->title, $p),
             'slug' => $this->slug,
-            'description' => $this->description,
-            'content' => $this->content,
+            'description' => $ps->resolve($this->description, $p),
+            'content' => $ps->resolve($this->content, $p),
             'category' => $this->whenLoaded('category', function () {
                 return [
                     'id' => $this->category->id,
@@ -30,16 +48,32 @@ class GuideResource extends JsonResource
                     'name' => $this->author->name,
                 ];
             }),
-            'steps' => $this->whenLoaded('steps', function () {
-                return $this->steps->map(function ($step) {
-                    return [
+            'steps' => $this->whenLoaded('steps', function () use ($ps, $p) {
+                return $this->steps->map(function ($step) use ($ps, $p) {
+                    $data = [
                         'id' => $step->id,
                         'step_number' => $step->step_number,
-                        'title' => $step->title,
-                        'content' => $step->content,
-                        'tip' => $step->tip,
-                        'warning' => $step->warning,
+                        'title' => $ps->resolve($step->title, $p),
+                        'description' => $ps->resolve($step->description, $p),
+                        'tip' => $ps->resolve($step->tip, $p),
+                        'warning' => $ps->resolve($step->warning, $p),
                     ];
+                    // Projekt-spezifische Bilder hinzufügen
+                    $images = $this->screenshotService->getGuideStepImages($step, $p);
+                    if ($images->isNotEmpty()) {
+                        $data['images'] = $images->map(function ($img) use ($p) {
+                            $isProjectSpecific = $p && $img instanceof \App\Models\ProjectGuideImage;
+                            return [
+                                'id' => $img->id,
+                                'filename' => $img->filename,
+                                'url' => asset($img->path),
+                                'caption' => $img->caption,
+                                'alt_text' => $img->alt_text,
+                                'is_project_specific' => $isProjectSpecific,
+                            ];
+                        });
+                    }
+                    return $data;
                 });
             }),
             'tags' => $this->whenLoaded('tags', function () {

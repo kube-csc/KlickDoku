@@ -55,4 +55,22 @@ class TutorialStep extends Model
 
         return $this->{$attribute} ?? null;
     }
+
+    /**
+     * Projekt-spezifischen Screenshot-Pfad zurückgeben, oder Master als Fallback.
+     */
+    public function projectScreenshot(Project $project): ?string
+    {
+        $img = ProjectTutorialImage::where('tutorial_step_id', $this->id)
+            ->where('project_id', $project->id)->first();
+        return $img ? $img->screenshot_path : $this->screenshot_path;
+    }
+
+    /**
+     * Eloquent-Beziehung: projekt-spezifische Screenshots (für with() und Eager Loading).
+     */
+    public function projectTutorialImages()
+    {
+        return $this->hasMany(ProjectTutorialImage::class, 'tutorial_step_id');
+    }
 }

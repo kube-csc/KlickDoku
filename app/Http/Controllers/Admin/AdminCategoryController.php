@@ -30,7 +30,7 @@ class AdminCategoryController extends Controller
             'sort_order' => 'nullable|integer',
         ]);
 
-        $validated['slug'] = Str::slug($validated['name']);
+        $validated['slug'] = slugFromTitle($validated['name']);
         $validated['sort_order'] = $validated['sort_order'] ?? Category::max('sort_order') + 1;
 
         Category::create($validated);
@@ -54,7 +54,7 @@ class AdminCategoryController extends Controller
             'sort_order' => 'nullable|integer',
         ]);
 
-        $validated['slug'] = Str::slug($validated['name']);
+        $validated['slug'] = slugFromTitle($validated['name']);
         $category->update($validated);
 
         return redirect()->route('admin.categories.index')

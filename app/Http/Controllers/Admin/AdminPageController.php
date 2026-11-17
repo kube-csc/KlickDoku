@@ -29,7 +29,7 @@ class AdminPageController extends Controller
             'sort_order' => 'nullable|integer',
         ]);
 
-        $validated['slug'] = Str::slug($validated['title']);
+        $validated['slug'] = slugFromTitle($validated['title']);
         $validated['show_in_nav'] = $request->has('show_in_nav');
         $validated['sort_order'] = $validated['sort_order'] ?? Page::max('sort_order') + 1;
 
@@ -53,7 +53,7 @@ class AdminPageController extends Controller
             'sort_order' => 'nullable|integer',
         ]);
 
-        $validated['slug'] = Str::slug($validated['title']);
+        $validated['slug'] = slugFromTitle($validated['title']);
         $validated['show_in_nav'] = $request->has('show_in_nav');
 
         $page->update($validated);

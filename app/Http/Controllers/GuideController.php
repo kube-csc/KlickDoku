@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Guide;
 use App\Models\Category;
+use App\Models\Project;
 use App\Helpers\CacheHelper;
+use App\Services\PlaceholderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -17,16 +19,25 @@ class GuideController extends Controller
     public function index(Request $request)
     {
         // Cache-Key basierend auf den Filter-Parametern
-        $cacheKey = 'webseite:guides_index_' . md5(
+        $project = $request->attributes->get('project');
+        
+        // Cache-Key enthält Projekt-Slug für projekt-spezifisches Caching
+        $projectPrefix = $project ? $project->slug . '_' : '';
+        $cacheKey = 'webseite:guides_index_' . $projectPrefix . md5(
             ($request->category ?? '') . 
             ($request->search ?? '') . 
             app()->getLocale()
         );
 
-        $cachedData = CacheHelper::remember($cacheKey, now()->addMinutes(30), function () use ($request) {
+        $cachedData = CacheHelper::remember($cacheKey, now()->addMinutes(30), function () use ($request, $project) {
             $query = Guide::with(['category', 'category.translations', 'author', 'steps', 'translations'])
                 ->where('status', 'published')
                 ->orderBy('published_at', 'desc');
+
+            // Projekt-Filter: nur zugewiesene Guides anzeigen
+            if ($project) {
+                $query->forProject($project);
+            }
 
             // Filter nach Kategorie
             if ($request->filled('category')) {
@@ -56,12 +67,19 @@ class GuideController extends Controller
      */
     public function show(string $locale, string $slug)
     {
+        $project = request()->attributes->get('project');
         $guide = Guide::where('slug', $slug)->firstOrFail();
         if ($guide->status !== 'published') {
             abort(404);
         }
 
-        $cacheKey = 'webseite:guide_show_' . $slug . '_' . app()->getLocale();
+        // Projekt-Zuweisung prüfen
+        if ($project && !$guide->projects->contains($project)) {
+            abort(404);
+        }
+
+        $projectPrefix = $project ? $project->slug . '_' : '';
+        $cacheKey = 'webseite:guide_show_' . $projectPrefix . $slug . '_' . app()->getLocale();
 
         $cachedData = CacheHelper::remember($cacheKey, now()->addMinutes(30), function () use ($guide) {
             // View-Count erhöhen

@@ -482,28 +482,61 @@ function uploadScreenshot(tutorialId, stepId, input) {
     const file = input.files[0];
     if (!file) return;
 
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    if (!csrfToken) {
+        console.error('CSRF-Token nicht gefunden!');
+        alert('Fehler: CSRF-Token nicht gefunden. Bitte laden Sie die Seite neu.');
+        return;
+    }
+
     const formData = new FormData();
     formData.append('screenshot', file);
     formData.append('step_id', stepId);
-    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+    formData.append('_token', csrfToken.getAttribute('content'));
+
+    console.log('Screenshot-Upload gestartet:', file.name, 'Größe:', file.size, 'Typ:', file.type);
 
     fetch(`/admin/tutorials/${tutorialId}/screenshot`, {
         method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
         body: formData,
     })
     .then(response => {
-        console.log('Upload-Antwort:', response.status, response.redirected);
-        if (response.ok || response.redirected) {
+        console.log('Upload-Antwort Status:', response.status);
+        console.log('Upload-Antwort Content-Type:', response.headers.get('content-type'));
+
+        // Versuche JSON zu lesen
+        if (response.headers.get('content-type')?.includes('application/json')) {
+            return response.json().then(data => {
+                console.log('Upload-Antwort JSON:', data);
+                if (data.success) {
+                    console.log('Upload erfolgreich, Seite wird neu geladen...');
+                    window.location.reload();
+                } else {
+                    alert('Fehler beim Hochladen des Screenshots: ' + (data.message || 'Unbekannter Fehler'));
+                }
+            });
+        }
+
+        // Bei Status 200 ohne JSON: der Server hat einen Redirect gesendet,
+        // den fetch() automatisch verfolgt hat -> HTML-Seite als Antwort
+        // -> Upload war erfolgreich, Seite neu laden
+        if (response.ok) {
+            console.log('Upload erfolgreich (Server-Antwort erhalten), Seite wird neu geladen...');
             window.location.reload();
             return;
         }
+
+        // Fehler als Text lesen
         return response.text().then(text => {
             console.error('Upload-Fehler:', response.status, text);
             alert('Fehler beim Hochladen des Screenshots: HTTP ' + response.status);
         });
     })
     .catch(error => {
-        console.error('Upload Fehler:', error);
+        console.error('Upload Netzwerk-Fehler:', error);
         alert('Fehler beim Hochladen des Screenshots: ' + error.message);
     });
 }
@@ -675,6 +708,10 @@ function setHotspotPosition(event) {
         const hotspotsContainer = stepItem.querySelector('.hotspots-container');
         const hotspotCount = hotspotsContainer.querySelectorAll('.hotspot-item').length;
         
+        // Screenshot-URL aus dem Schritt holen
+        const screenshotPathInput = stepItem.querySelector('input[name$="[screenshot_path]"]');
+        const hasScreenshot = screenshotPathInput && screenshotPathInput.value;
+        
         const hotspotHtml = `
         <div class="hotspot-item flex gap-2 mb-2 items-center">
             <input type="hidden" name="steps[${currentHotspotStepIndex}][hotspots][${hotspotCount}][hotspot_type]" value="circle">
@@ -690,6 +727,8 @@ function setHotspotPosition(event) {
                    placeholder="Link (optional)"
                    class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
             <span class="hotspot-pos-display text-xs text-gray-500 whitespace-nowrap" data-hotspot="${hotspotCount}">${posX}%, ${posY}%</span>
+            ${hasScreenshot ? `<button type="button" onclick="openHotspotEditor('', 0, 0, '${currentHotspotStepIndex}', '${hotspotCount}')"
+                    class="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 whitespace-nowrap" title="Position auf dem Bild setzen">📍 Position</button>` : ''}
             <button type="button" class="remove-hotspot text-red-500 hover:text-red-700 text-sm">✕</button>
         </div>`;
         

@@ -15,6 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('category_id')->nullable()->constrained()->nullOnDelete();
             $table->string('title');
+            $table->string('meta_title')->nullable();
+            $table->text('meta_description')->nullable();
+            $table->string('og_image')->nullable();
             $table->string('slug')->unique();
             $table->text('description');
             $table->string('thumbnail_path')->nullable();
@@ -45,11 +48,13 @@ return new class extends Migration
         Schema::create('tutorial_hotspots', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tutorial_step_id')->constrained()->cascadeOnDelete();
+            $table->string('selector')->nullable();
             $table->enum('hotspot_type', ['click', 'hover', 'drag', 'type', 'wait']);
             $table->integer('position_x');
             $table->integer('position_y');
             $table->integer('radius')->default(20);
             $table->string('label')->nullable();
+            $table->string('link')->nullable();
             $table->enum('cursor_type', ['arrow', 'pointer', 'hand', 'text', 'context_menu'])->default('pointer');
             $table->integer('click_count')->default(1);
             $table->boolean('is_clickable')->default(true);

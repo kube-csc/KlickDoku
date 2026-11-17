@@ -1,10 +1,10 @@
 @extends('layouts.public')
 
-@section('title', $tutorial->getTranslationAttribute('title', $locale) ?? $tutorial->title)
-@section('meta_description', $tutorial->meta_description ?? $tutorial->getTranslationAttribute('description', $locale) ?? $tutorial->description)
+@section('title', $tutorialTitle)
+@section('meta_description', $tutorial->meta_description ?? $tutorialDescription)
 @section('canonical', url()->current())
-@section('og_title', $tutorial->getTranslationAttribute('title', $locale) ?? $tutorial->title)
-@section('og_description', $tutorial->meta_description ?? $tutorial->getTranslationAttribute('description', $locale) ?? $tutorial->description)
+@section('og_title', $tutorialTitle)
+@section('og_description', $tutorial->meta_description ?? $tutorialDescription)
 @section('og_type', 'article')
 @if($tutorial->og_image)
     @section('og_image', asset($tutorial->og_image))
@@ -12,13 +12,21 @@
 
 @section('content')
 @php
-    $tutTitle = $tutorial->getTranslationAttribute('title', $locale) ?? $tutorial->title;
-    $tutDesc = $tutorial->getTranslationAttribute('description', $locale) ?? $tutorial->description;
+    $tutTitle = $tutorialTitle;
+    $tutDesc = $tutorialDescription;
     $tutCatName = $tutorial->category ? ($tutorial->category->getTranslationAttribute('title', $locale) ?? $tutorial->category->name) : null;
     $currentStep = $progress && $progress->current_step_id
         ? $tutorial->steps->find($progress->current_step_id)
         : $tutorial->steps->first();
     $currentStepNumber = $currentStep ? $currentStep->step_number : 1;
+    // Lade stepsData für den ersten Schritt (bereits mit ersetzten Platzhaltern)
+    $firstStepData = $stepsData[$currentStepNumber - 1] ?? null;
+    $firstScreenshotPath = $firstStepData['screenshot_path'] ?? null;
+    $firstStepTitle = $firstStepData['title'] ?? ($currentStep->title ?? '');
+    $firstStepInstruction = $firstStepData['instruction'] ?? ($currentStep->instruction ?? '');
+    $firstStepTip = $firstStepData['tip'] ?? ($currentStep->tip ?? '');
+    $firstStepWarning = $firstStepData['warning'] ?? ($currentStep->warning ?? '');
+    $firstStepHotspots = $firstStepData['hotspots'] ?? [];
 @endphp
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -68,8 +76,8 @@
         <!-- Schritt-Titel -->
         <div class="px-6 py-4 bg-purple-50 border-b border-purple-100">
             <h2 class="text-xl font-semibold text-purple-900" id="step-title">
-                @if($currentStep)
-                    {{ $currentStep->title }}
+                @if($firstStepTitle)
+                    {{ $firstStepTitle }}
                 @else
                     {{ __('common.no_steps') }}
                 @endif
@@ -79,10 +87,10 @@
         <!-- Screenshot-Bereich mit Hotspots -->
         <div class="relative bg-gray-100" id="screenshot-container"
              style="position: relative; min-height: 400px;">
-            @if($currentStep && $currentStep->screenshot_path)
+            @if($currentStep && $firstScreenshotPath)
                 <img id="screenshot-image"
-                     src="{{ asset('storage/' . $currentStep->screenshot_path) }}"
-                     alt="{{ $currentStep->title }}"
+                     src="{{ asset('storage/' . $firstScreenshotPath) }}"
+                     alt="{{ $firstStepTitle }}"
                      loading="lazy"
                      class="w-full h-auto"
                      style="display: block;">
@@ -98,22 +106,22 @@
                 </div>
             @endif
 
-            <!-- Hotspot-Overlays -->
-            @if($currentStep)
-                @foreach($currentStep->hotspots as $hotspot)
+            <!-- Hotspot-Overlays (verwende stepsData mit ersetzten Platzhaltern) -->
+            @if($currentStep && !empty($firstStepHotspots))
+                @foreach($firstStepHotspots as $hotspot)
                     <div class="tutorial-hotspot"
-                         data-hotspot-id="{{ $hotspot->id }}"
-                         data-clickable="{{ $hotspot->is_clickable ? '1' : '0' }}"
-                         data-label="{{ $hotspot->label ?? '' }}"
-                         data-link="{{ $hotspot->link ?? '' }}"
+                         data-hotspot-id="{{ $hotspot['id'] }}"
+                         data-clickable="{{ $hotspot['is_clickable'] ? '1' : '0' }}"
+                         data-label="{{ $hotspot['label'] ?? '' }}"
+                         data-link="{{ $hotspot['link'] ?? '' }}"
                          style="
                             position: absolute;
-                            left: {{ $hotspot->position_x }}%;
-                            top: {{ $hotspot->position_y }}%;
-                            width: {{ $hotspot->radius ?? 30 }}px;
-                            height: {{ $hotspot->radius ?? 30 }}px;
+                            left: {{ $hotspot['position_x'] }}%;
+                            top: {{ $hotspot['position_y'] }}%;
+                            width: {{ $hotspot['radius'] ?? 30 }}px;
+                            height: {{ $hotspot['radius'] ?? 30 }}px;
                             transform: translate(-50%, -50%);
-                            cursor: {{ $hotspot->is_clickable ? 'pointer' : 'default' }};
+                            cursor: {{ $hotspot['is_clickable'] ? 'pointer' : 'default' }};
                             z-index: 10;
                          ">
                         <!-- Pulsierender Kreis -->
@@ -134,7 +142,7 @@
                                 width: 28px;
                                 height: 28px;
                                 border-radius: 50%;
-                                background: {{ $hotspot->link ? '#2563eb' : '#9333ea' }};
+                                background: {{ $hotspot['link'] ? '#2563eb' : '#9333ea' }};
                                 border: 2px solid white;
                                 box-shadow: 0 2px 8px rgba(0,0,0,0.3);
                                 display: flex;
@@ -142,12 +150,12 @@
                                 justify-content: center;
                                 font-size: 14px;
                              ">
-                            @if($hotspot->link)
+                            @if($hotspot['link'])
                                 🔗
                             @endif
                         </div>
                         <!-- Label -->
-                        @if($hotspot->label)
+                        @if($hotspot['label'])
                             <div class="hotspot-label"
                                  style="
                                     position: absolute;
@@ -165,7 +173,7 @@
                                     transition: opacity 0.2s;
                                     pointer-events: none;
                                  ">
-                                {{ $hotspot->label }}
+                                {{ $hotspot['label'] }}
                             </div>
                         @endif
                     </div>
@@ -174,32 +182,30 @@
         </div>
 
         <!-- Anweisungstext -->
-        @if($currentStep && $currentStep->instruction)
+        @if($firstStepInstruction)
             <div class="px-6 py-4 border-t border-gray-100">
                 <p class="text-gray-700 leading-relaxed" id="step-instruction">
-                    {!! nl2br(e($currentStep->instruction)) !!}
+                    {!! nl2br(e($firstStepInstruction)) !!}
                 </p>
             </div>
         @endif
 
         <!-- Tipp / Warnung -->
         <div id="tip-warning-container">
-        @if($currentStep)
-            @if($currentStep->tip)
+            @if($firstStepTip)
                 <div class="mx-6 mt-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r">
                     <p class="text-sm text-yellow-800">
-                        <strong>💡 {{ __('common.tip') }}:</strong> {{ $currentStep->tip }}
+                        <strong>💡 {{ __('common.tip') }}:</strong> {{ $firstStepTip }}
                     </p>
                 </div>
             @endif
-            @if($currentStep->warning)
+            @if($firstStepWarning)
                 <div class="mx-6 mt-4 p-4 bg-red-50 border-l-4 border-red-400 rounded-r">
                     <p class="text-sm text-red-800">
-                        <strong>⚠️ {{ __('common.warning') }}:</strong> {{ $currentStep->warning }}
+                        <strong>⚠️ {{ __('common.warning') }}:</strong> {{ $firstStepWarning }}
                     </p>
                 </div>
             @endif
-        @endif
         </div>
 
         <!-- Navigation -->
@@ -244,23 +250,23 @@
     <div class="mt-6 bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ __('common.steps_overview') }}</h3>
         <div class="space-y-2" id="steps-overview-list">
-            @foreach($tutorial->steps as $step)
-                <button onclick="goToStep({{ $step->step_number }})"
-                        data-step="{{ $step->step_number }}"
+            @foreach($stepsData as $stepData)
+                <button onclick="goToStep({{ $stepData['step_number'] }})"
+                        data-step="{{ $stepData['step_number'] }}"
                         class="step-overview-btn w-full flex items-center px-4 py-3 rounded-md text-left transition-colors
-                               {{ $step->step_number === $currentStepNumber
+                               {{ $stepData['step_number'] === $currentStepNumber
                                    ? 'bg-purple-50 text-purple-700 border-l-4 border-purple-500'
                                    : 'hover:bg-gray-50 text-gray-700 border-l-4 border-transparent' }}">
                     <span class="step-number-badge flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full
-                                 {{ $step->step_number === $currentStepNumber
+                                 {{ $stepData['step_number'] === $currentStepNumber
                                      ? 'bg-purple-500 text-white'
                                      : 'bg-gray-200 text-gray-600' }}">
-                        {{ $step->step_number }}
+                        {{ $stepData['step_number'] }}
                     </span>
-                    <span class="ml-3 text-sm font-medium step-title-text">{{ $step->title }}</span>
-                    @if($step->hotspots->count() > 0)
+                    <span class="ml-3 text-sm font-medium step-title-text">{{ $stepData['title'] }}</span>
+                    @if(!empty($stepData['hotspots']))
                         <span class="ml-auto text-xs text-gray-400">
-                            {{ $step->hotspots->count() }} {{ __('common.hotspots') }}
+                            {{ count($stepData['hotspots']) }} {{ __('common.hotspots') }}
                         </span>
                     @endif
                 </button>

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Tutorial;
 use App\Models\Category;
 use App\Models\TutorialProgress;
+use App\Services\PlaceholderService;
+use App\Services\ProjectScreenshotService;
 use Illuminate\Http\Request;
 
 class TutorialController extends Controller
@@ -14,9 +16,15 @@ class TutorialController extends Controller
      */
     public function index(Request $request)
     {
+        $project = $request->attributes->get('project');
         $query = Tutorial::with(['category', 'category.translations', 'author', 'translations'])
             ->where('status', 'published')
             ->orderBy('created_at', 'desc');
+
+        // Projekt-Filter: nur zugewiesene Tutorials anzeigen
+        if ($project) {
+            $query->forProject($project);
+        }
 
         if ($request->filled('category')) {
             $query->where('category_id', $request->category);
@@ -41,13 +49,22 @@ class TutorialController extends Controller
      */
     public function show(string $locale, string $slug)
     {
+        $project = request()->attributes->get('project');
         $tutorial = Tutorial::where('slug', $slug)->firstOrFail();
         if ($tutorial->status !== 'published') {
             abort(404);
         }
 
+        // Projekt-Zuweisung prüfen
+        if ($project && !$tutorial->projects->contains($project)) {
+            abort(404);
+        }
+
         $tutorial->increment('view_count');
         $tutorial->load(['category', 'category.translations', 'author', 'steps.hotspots', 'steps.stepTranslations', 'tags', 'translations']);
+
+        $screenshotService = app(ProjectScreenshotService::class);
+        $placeholderService = app(PlaceholderService::class);
 
         // Fortschritt für authentifizierte Benutzer laden
         $progress = null;
@@ -66,22 +83,22 @@ class TutorialController extends Controller
         }
 
         // Steps als JSON-Array für den JavaScript-Player vorbereiten
-        $stepsData = $tutorial->steps->map(function ($step) use ($locale) {
+        $stepsData = $tutorial->steps->map(function ($step) use ($locale, $screenshotService, $project, $placeholderService) {
             return [
                 'id' => $step->id,
                 'step_number' => $step->step_number,
-                'title' => $step->getTranslationAttribute('title', $locale) ?? $step->title,
-                'instruction' => $step->getTranslationAttribute('instruction', $locale) ?? $step->instruction,
-                'tip' => $step->getTranslationAttribute('tip', $locale) ?? $step->tip,
-                'warning' => $step->getTranslationAttribute('warning', $locale) ?? $step->warning,
-                'screenshot_path' => $step->screenshot_path,
-                'hotspots' => $step->hotspots->map(function ($h) {
+                'title' => $placeholderService->resolve($step->getTranslationAttribute('title', $locale) ?? $step->title, $project, $locale),
+                'instruction' => $placeholderService->resolve($step->getTranslationAttribute('instruction', $locale) ?? $step->instruction, $project, $locale),
+                'tip' => $placeholderService->resolve($step->getTranslationAttribute('tip', $locale) ?? $step->tip, $project, $locale),
+                'warning' => $placeholderService->resolve($step->getTranslationAttribute('warning', $locale) ?? $step->warning, $project, $locale),
+                'screenshot_path' => $screenshotService->getTutorialStepScreenshot($step, $project),
+                'hotspots' => $step->hotspots->map(function ($h) use ($placeholderService, $project, $locale) {
                     return [
                         'id' => $h->id,
                         'position_x' => $h->position_x,
                         'position_y' => $h->position_y,
                         'radius' => $h->radius ?? 30,
-                        'label' => $h->label,
+                        'label' => $placeholderService->resolve($h->label, $project, $locale),
                         'link' => $h->link,
                         'is_clickable' => $h->is_clickable,
                     ];
@@ -89,7 +106,11 @@ class TutorialController extends Controller
             ];
         })->values()->all();
 
-        return view('tutorials.show', compact('tutorial', 'progress', 'stepsData', 'locale'));
+        // Tutorial-Titel und -Beschreibung mit Platzhaltern ersetzen
+        $tutorialTitle = $placeholderService->resolve($tutorial->getTranslationAttribute('title', $locale) ?? $tutorial->title, $project, $locale);
+        $tutorialDescription = $placeholderService->resolve($tutorial->getTranslationAttribute('description', $locale) ?? $tutorial->description, $project, $locale);
+
+        return view('tutorials.show', compact('tutorial', 'progress', 'stepsData', 'locale', 'tutorialTitle', 'tutorialDescription'));
     }
 
     /**

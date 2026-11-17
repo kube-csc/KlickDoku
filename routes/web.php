@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\AdminStatisticsController;
 use App\Http\Controllers\Admin\AdminTranslationController;
 use App\Http\Controllers\Admin\AdminStepTranslationController;
 use App\Http\Controllers\Admin\AdminAIController;
+use App\Http\Controllers\Admin\AdminProjectController;
 use App\Http\Controllers\Api\ApiController;
 use App\Models\TutorialStep;
 use App\Http\Controllers\CommentController;
@@ -151,6 +152,47 @@ Route::middleware([
     // KI-Inhalt generieren (vollständiger Anleitungsentwurf)
     Route::post('/ai/generate-content', [AdminAIController::class, 'generateContent'])
         ->name('ai.generate-content');
+
+    // Multi-Projekt: Projekte verwalten
+    Route::resource('projects', AdminProjectController::class);
+    Route::patch('projects/{project}/terms', [AdminProjectController::class, 'updateTerms'])
+        ->name('projects.terms.update');
+    Route::post('projects/{project}/terms/import', [AdminProjectController::class, 'importTerms'])
+        ->name('projects.terms.import');
+    Route::get('projects/{project}/terms/suggest', [AdminProjectController::class, 'suggestTerms'])
+        ->name('projects.terms.suggest');
+    Route::get('projects/{project}/terms/export/json', [AdminProjectController::class, 'exportTermsJson'])
+        ->name('projects.terms.export.json');
+    Route::get('projects/{project}/terms/export/csv', [AdminProjectController::class, 'exportTermsCsv'])
+        ->name('projects.terms.export.csv');
+    Route::post('projects/{project}/terms/import/json', [AdminProjectController::class, 'importTermsJson'])
+        ->name('projects.terms.import.json');
+    Route::post('projects/{project}/terms/import/csv', [AdminProjectController::class, 'importTermsCsv'])
+        ->name('projects.terms.import.csv');
+    Route::post('projects/{project}/guides', [AdminProjectController::class, 'assignGuides'])
+        ->name('projects.guides.assign');
+    Route::post('projects/{project}/tutorials', [AdminProjectController::class, 'assignTutorials'])
+        ->name('projects.tutorials.assign');
+
+    // Projekt-spezifische Screenshots
+    Route::get('projects/{project}/guide-screenshots', [AdminProjectController::class, 'getGuideScreenshots'])
+        ->name('projects.guide-screenshots');
+    Route::get('projects/{project}/tutorial-screenshots', [AdminProjectController::class, 'getTutorialScreenshots'])
+        ->name('projects.tutorial-screenshots');
+    Route::post('projects/{project}/guide-screenshots', [AdminProjectController::class, 'storeGuideScreenshot'])
+        ->name('projects.guide-screenshots.store');
+    Route::post('projects/{project}/tutorial-screenshots', [AdminProjectController::class, 'storeTutorialScreenshot'])
+        ->name('projects.tutorial-screenshots.store');
+    Route::delete('projects/{project}/guide-screenshots/{guideStepId}', [AdminProjectController::class, 'destroyGuideScreenshot'])
+        ->name('projects.guide-screenshots.destroy');
+    Route::delete('projects/{project}/tutorial-screenshots/{tutorialStepId}', [AdminProjectController::class, 'destroyTutorialScreenshot'])
+        ->name('projects.tutorial-screenshots.destroy');
+
+    // Projekt-User-Zuweisungen
+    Route::post('projects/{project}/users', [AdminProjectController::class, 'assignUsers'])
+        ->name('projects.users.assign');
+    Route::delete('projects/{project}/users/{user}', [AdminProjectController::class, 'removeUser'])
+        ->name('projects.users.remove');
 });
 
 // API-Endpunkte (öffentlich, JSON)

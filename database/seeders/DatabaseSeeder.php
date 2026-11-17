@@ -16,6 +16,9 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            PlaceholderDefinitionsSeeder::class,
+            DemoProjectsSeeder::class,
+            DemoContentSeeder::class,
             DemoSeeder::class,
         ]);
     }

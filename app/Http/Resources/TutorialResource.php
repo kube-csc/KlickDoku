@@ -2,21 +2,39 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Project;
+use App\Services\PlaceholderService;
+use App\Services\ProjectScreenshotService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class TutorialResource extends JsonResource
 {
+    protected ?Project $project;
+    protected PlaceholderService $placeholderService;
+    protected ProjectScreenshotService $screenshotService;
+
+    public function __construct($resource)
+    {
+        parent::__construct($resource);
+        $this->project = request()->attributes->get('project');
+        $this->placeholderService = app(PlaceholderService::class);
+        $this->screenshotService = app(ProjectScreenshotService::class);
+    }
+
     /**
      * Transform the resource into an array.
      */
     public function toArray(Request $request): array
     {
+        $ps = $this->placeholderService;
+        $p = $this->project;
+
         return [
             'id' => $this->id,
-            'title' => $this->title,
+            'title' => $ps->resolve($this->title, $p),
             'slug' => $this->slug,
-            'description' => $this->description,
+            'description' => $ps->resolve($this->description, $p),
             'estimated_minutes' => $this->estimated_minutes,
             'category' => $this->whenLoaded('category', function () {
                 return [
@@ -30,24 +48,34 @@ class TutorialResource extends JsonResource
                     'name' => $this->author->name,
                 ];
             }),
-            'steps' => $this->whenLoaded('steps', function () {
-                return $this->steps->map(function ($step) {
-                    return [
+            'steps' => $this->whenLoaded('steps', function () use ($ps, $p) {
+                return $this->steps->map(function ($step) use ($ps, $p) {
+                    $data = [
                         'id' => $step->id,
                         'step_number' => $step->step_number,
-                        'title' => $step->title,
-                        'content' => $step->content,
-                        'hotspots' => $step->whenLoaded('hotspots', function () {
-                            return $step->hotspots->map(fn($hs) => [
+                        'title' => $ps->resolve($step->title, $p),
+                        'instruction' => $ps->resolve($step->instruction, $p),
+                    ];
+                    // Projekt-spezifischer Screenshot
+                    $screenshotPath = $this->screenshotService->getTutorialStepScreenshot($step, $p);
+                    if ($screenshotPath) {
+                        $data['screenshot'] = asset($screenshotPath);
+                        $data['screenshot_is_project_specific'] = (bool)$p;
+                    }
+                    // Hotspots mit Platzhalter-Ersetzung
+                    if ($step->relationLoaded('hotspots')) {
+                        $data['hotspots'] = $step->hotspots->map(function ($hs) use ($ps, $p) {
+                            return [
                                 'id' => $hs->id,
                                 'x' => $hs->x,
                                 'y' => $hs->y,
-                                'label' => $hs->label,
+                                'label' => $ps->resolve($hs->label, $p),
                                 'link' => $hs->link,
-                                'description' => $hs->description,
-                            ]);
-                        }),
-                    ];
+                                'description' => $ps->resolve($hs->description, $p),
+                            ];
+                        });
+                    }
+                    return $data;
                 });
             }),
             'tags' => $this->whenLoaded('tags', function () {

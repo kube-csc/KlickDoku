@@ -39,4 +39,23 @@ class GuideStep extends Model
 
         return $this->{$attribute} ?? null;
     }
+
+    /**
+     * Alle projekt-spezifischen Bilder für diesen Schritt.
+     * Nutze projectImagesFor($project) für ein bestimmtes Projekt.
+     */
+    public function projectImages(Project $project)
+    {
+        return ProjectGuideImage::where('guide_step_id', $this->id)
+            ->where('project_id', $project->id)
+            ->orderBy('sort_order')->get();
+    }
+
+    /**
+     * Eloquent-Beziehung: projekt-spezifische Bilder (für with() und Eager Loading).
+     */
+    public function projectGuideImages()
+    {
+        return $this->hasMany(ProjectGuideImage::class, 'guide_step_id')->orderBy('sort_order');
+    }
 }
