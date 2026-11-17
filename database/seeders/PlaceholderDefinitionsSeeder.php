@@ -22,8 +22,8 @@ class PlaceholderDefinitionsSeeder extends Seeder
                 'key' => 'club_name',
                 'description_de' => 'Name des Vereins oder Clubs',
                 'description_en' => 'Name of the club',
-                'default_value_de' => 'Sportverein Datteln',
-                'default_value_en' => 'Sports Club Datteln',
+                'default_value_de' => 'Sportverein',
+                'default_value_en' => 'Sports Club',
                 'category' => 'general',
             ],
             [

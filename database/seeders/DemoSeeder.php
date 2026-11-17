@@ -20,15 +20,17 @@ class DemoSeeder extends Seeder
 {
     public function run(): void
     {
-        // Admin-Benutzer erstellen
-        $admin = User::create([
-            'name' => 'Administrator',
-            'email' => 'admin@verein.local',
-            'password' => Hash::make('password'),
-            'email_verified_at' => now(),
-        ]);
+        // Admin-Benutzer erstellen (nur wenn noch kein Admin existiert)
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@verein.local'],
+            [
+                'name' => 'Administrator',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+            ]
+        );
 
-        // Kategorien basierend auf den 5 Hauptprojekten
+        // Kategorien basierend auf den 5 Hauptprojekten (firstOrCreate um Duplikate zu vermeiden)
         $categories = [
             ['name' => 'Vereinsverwaltung', 'slug' => 'vereinsverwaltung', 'description' => 'Kernfunktionen der Vereinsverwaltung: Mitglieder, Anträge, Fördermittel'],
             ['name' => 'Regattaview', 'slug' => 'regattaview', 'description' => 'Live-Ansicht von Regatta-Ergebnissen und Rankings'],
@@ -38,13 +40,16 @@ class DemoSeeder extends Seeder
         ];
 
         foreach ($categories as $cat) {
-            Category::create($cat);
+            Category::firstOrCreate(['slug' => $cat['slug']], $cat);
         }
 
-        // Tags erstellen
+        // Tags erstellen (firstOrCreate um Duplikate zu vermeiden)
         $tags = ['Einsteiger', 'Fortgeschritten', 'Anträge', 'Mitglieder', 'Regatten', 'Helfer', 'Kurse'];
         foreach ($tags as $name) {
-            Tag::create(['name' => $name, 'slug' => str($name)->slug()]);
+            Tag::firstOrCreate(
+                ['slug' => str($name)->slug()],
+                ['name' => $name]
+            );
         }
 
         // Beispiel-Anleitung: Fördermittel-Antrag erstellen
