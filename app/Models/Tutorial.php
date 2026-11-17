@@ -11,10 +11,30 @@ class Tutorial extends Model
 
     protected $fillable = [
         'category_id', 'title', 'slug', 'description', 'thumbnail_path',
-        'estimated_duration_minutes', 'status', 'author_id',
+        'estimated_duration_minutes', 'status', 'author_id', 'published',
         'view_count', 'completion_count',
         'meta_title', 'meta_description', 'og_image'
     ];
+
+    protected $casts = [
+        'published' => 'boolean',
+    ];
+
+    /**
+     * Accessor für published – gibt true zurück, wenn status 'published' ist.
+     */
+    public function getPublishedAttribute(): bool
+    {
+        return $this->status === 'published';
+    }
+
+    /**
+     * Setter für published – setzt status auf 'published' oder 'draft'.
+     */
+    public function setPublishedAttribute(bool $value): void
+    {
+        $this->attributes['status'] = $value ? 'published' : 'draft';
+    }
 
     public function toSearchableArray()
     {

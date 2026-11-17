@@ -11,14 +11,31 @@ class Guide extends Model
 
     protected $fillable = [
         'category_id', 'title', 'slug', 'description', 'content',
-        'version', 'project_ref', 'status', 'author_id',
+        'version', 'project_ref', 'status', 'author_id', 'published',
         'published_at', 'view_count',
         'meta_title', 'meta_description', 'og_image'
     ];
 
     protected $casts = [
+        'published' => 'boolean',
         'published_at' => 'datetime',
     ];
+
+    /**
+     * Accessor für published – gibt true zurück, wenn status 'published' ist.
+     */
+    public function getPublishedAttribute(): bool
+    {
+        return $this->status === 'published';
+    }
+
+    /**
+     * Setter für published – setzt status auf 'published' oder 'draft'.
+     */
+    public function setPublishedAttribute(bool $value): void
+    {
+        $this->attributes['status'] = $value ? 'published' : 'draft';
+    }
 
     public function toSearchableArray()
     {
