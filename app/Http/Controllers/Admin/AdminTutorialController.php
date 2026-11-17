@@ -318,6 +318,27 @@ class AdminTutorialController extends Controller
     }
 
     /**
+     * OG-Bild eines Tutorials löschen (unterstützt AJAX und Redirect).
+     */
+    public function destroyOgImage($tutorialId)
+    {
+        $tutorial = Tutorial::findOrFail($tutorialId);
+        if ($tutorial->og_image) {
+            Storage::disk('public')->delete($tutorial->og_image);
+            $tutorial->update(['og_image' => null]);
+        }
+
+        CacheHelper::flushAll();
+
+        if (request()->wantsJson() || request()->header('Accept') === 'application/json') {
+            return response()->json(['success' => true, 'message' => 'Vorschau-Bild erfolgreich gelöscht.']);
+        }
+
+        return redirect()->back()
+            ->with('success', 'Vorschau-Bild erfolgreich gelöscht.');
+    }
+
+    /**
      * Bild komprimieren und speichern.
      * Maximale Breite: 1920px, Qualität: 80%.
      */

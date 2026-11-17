@@ -119,6 +119,8 @@ Route::middleware([
         ->name('tutorials.screenshot.store');
     Route::delete('tutorials/{tutorial:id}/steps/{step}/screenshot', [AdminImageController::class, 'destroyTutorialScreenshot'])
         ->name('tutorials.screenshot.destroy');
+    Route::delete('tutorials/{tutorial:id}/og-image', [AdminTutorialController::class, 'destroyOgImage'])
+        ->name('tutorials.og-image.destroy');
 
     // Kommentar-Moderation
     Route::get('/comments', [CommentController::class, 'index'])->name('comments.index');
