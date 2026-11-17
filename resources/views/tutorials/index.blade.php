@@ -51,7 +51,11 @@
                             $tutCatName = $tutorial->category ? ($tutorial->category->getTranslationAttribute('title', $locale) ?? $tutorial->category->name) : null;
                         @endphp
                         <div class="bg-white rounded-lg shadow hover:shadow-md transition-shadow overflow-hidden">
-                            @if($tutorial->thumbnail_path)
+                            @if($tutorial->og_image)
+                                <div class="h-48 bg-gray-200 overflow-hidden">
+                                    <img src="{{ asset('storage/' . $tutorial->og_image) }}" alt="{{ $tutTitle }}" class="w-full h-full object-cover">
+                                </div>
+                            @elseif($tutorial->thumbnail_path)
                                 <div class="h-48 bg-gray-200 overflow-hidden">
                                     <img src="{{ asset($tutorial->thumbnail_path) }}" alt="{{ $tutTitle }}" class="w-full h-full object-cover">
                                 </div>

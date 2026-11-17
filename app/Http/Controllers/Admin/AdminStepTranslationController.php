@@ -47,7 +47,7 @@ class AdminStepTranslationController extends Controller
     /**
      * Schritt-Übersetzung für ein Tutorial speichern oder aktualisieren.
      */
-    public function storeTutorialStep(Request $request, Tutorial $tutorial, $stepId)
+    public function storeTutorialStep(Request $request, $tutorialId, $stepId)
     {
         $validated = $request->validate([
             'locale' => 'required|in:de,en',
@@ -94,7 +94,7 @@ class AdminStepTranslationController extends Controller
     /**
      * Schritt-Übersetzung für ein Tutorial löschen.
      */
-    public function destroyTutorialStep(Tutorial $tutorial, $stepId, string $locale)
+    public function destroyTutorialStep($tutorialId, $stepId, string $locale)
     {
         TutorialStepTranslation::where('tutorial_step_id', $stepId)
             ->where('locale', $locale)

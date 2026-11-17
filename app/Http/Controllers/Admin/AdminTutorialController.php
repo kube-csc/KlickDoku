@@ -11,6 +11,7 @@ use App\Models\TutorialHotspot;
 use App\Helpers\CacheHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
 
@@ -42,7 +43,7 @@ class AdminTutorialController extends Controller
             'published' => 'boolean',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
-            'og_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'og_image' => 'nullable|image|max:5120',
             'steps' => 'nullable|array',
             'steps.*.title' => 'required_with:steps|string|max:255',
             'steps.*.instruction' => 'required_with:steps|string',
@@ -62,7 +63,11 @@ class AdminTutorialController extends Controller
         // OpenGraph-Bild hochladen
         $ogImagePath = null;
         if ($request->hasFile('og_image')) {
-            $ogImagePath = $this->compressAndStore($request->file('og_image'), 'tutorials/' . 'new');
+            try {
+                $ogImagePath = $this->compressAndStore($request->file('og_image'), 'tutorials/' . 'new');
+            } catch (\Exception $e) {
+                $request->session()->flash('error', 'Fehler beim Hochladen des Vorschau-Bilds: ' . $e->getMessage());
+            }
         }
 
         $tutorial = Tutorial::create([
@@ -173,7 +178,7 @@ class AdminTutorialController extends Controller
             'published' => 'boolean',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
-            'og_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'og_image' => 'nullable|image|max:5120',
             'steps' => 'nullable|array',
             'steps.*.title' => 'required_with:steps|string|max:255',
             'steps.*.instruction' => 'required_with:steps|string',
@@ -193,11 +198,17 @@ class AdminTutorialController extends Controller
         // OpenGraph-Bild hochladen
         $ogImagePath = $tutorial->og_image;
         if ($request->hasFile('og_image')) {
-            // Altes OG-Bild löschen
-            if ($tutorial->og_image) {
-                Storage::disk('public')->delete($tutorial->og_image);
+            try {
+                // Altes OG-Bild löschen
+                if ($tutorial->og_image) {
+                    Storage::disk('public')->delete($tutorial->og_image);
+                }
+                $ogImagePath = $this->compressAndStore($request->file('og_image'), 'tutorials/' . $tutorial->id);
+            } catch (\Exception $e) {
+                Log::error('OG Image Fehler: ' . $e->getMessage());
+                $request->session()->flash('error', 'Fehler beim Hochladen des Vorschau-Bilds.');
+                $ogImagePath = $tutorial->og_image;
             }
-            $ogImagePath = $this->compressAndStore($request->file('og_image'), 'tutorials/' . $tutorial->id);
         }
 
         $tutorial->update([
@@ -318,7 +329,7 @@ class AdminTutorialController extends Controller
         // Auf maximale Breite von 1920px skalieren
         $image->scaleDown(1920, null);
 
-        $extension = $file->getClientOriginalExtension();
+        $extension = strtolower($file->getClientOriginalExtension());
         $filename = Str::uuid() . '.' . $extension;
         $path = $directory . '/' . $filename;
 

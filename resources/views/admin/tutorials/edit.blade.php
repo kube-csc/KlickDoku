@@ -78,11 +78,11 @@
                     <p class="mt-1 text-xs text-gray-500">Empfohlen: 150-160 Zeichen für Suchmaschinen</p>
                 </div>
                 <div>
-                    <label for="og_image" class="block text-sm font-medium text-gray-700">OpenGraph-Bild (optional)</label>
+                    <label for="og_image" class="block text-sm font-medium text-gray-700">Vorschau-Bild für Social Media (optional)</label>
                     
                     @if($tutorial->og_image)
                     <div class="mt-2 mb-3">
-                        <img src="{{ asset($tutorial->og_image) }}" alt="Aktuelles OG-Bild"
+                        <img src="{{ asset('storage/' . $tutorial->og_image) }}" alt="Aktuelles OG-Bild"
                              class="max-w-xs rounded-lg border border-gray-200">
                         <p class="mt-1 text-xs text-gray-500">Aktuelles Bild</p>
                     </div>
@@ -93,7 +93,7 @@
                     <div id="og_image_preview" class="mt-2 hidden">
                         <img id="og_image_preview_img" src="" alt="Vorschau" class="max-w-xs rounded-lg border border-gray-200">
                     </div>
-                    <p class="mt-1 text-xs text-gray-500">Wird bei Social-Media-Shares angezeigt (empfohlen: 1200x630px, max. 5MB)</p>
+                    <p class="mt-1 text-xs text-gray-500">Wird angezeigt, wenn der Tutorial-Link auf Facebook, WhatsApp, Slack etc. geteilt wird (empfohlen: 1200×630px, max. 5MB)</p>
                     @error('og_image')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror

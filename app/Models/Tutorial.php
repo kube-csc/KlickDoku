@@ -9,6 +9,14 @@ class Tutorial extends Model
 {
     use Searchable;
 
+    /**
+     * Route Model Binding über den Slug statt der ID.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
     protected $fillable = [
         'category_id', 'title', 'slug', 'description', 'thumbnail_path',
         'estimated_duration_minutes', 'status', 'author_id', 'published',

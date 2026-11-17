@@ -7,7 +7,7 @@
 @section('og_description', $tutorial->meta_description ?? $tutorialDescription)
 @section('og_type', 'article')
 @if($tutorial->og_image)
-    @section('og_image', asset($tutorial->og_image))
+    @section('og_image', asset('storage/' . $tutorial->og_image))
 @endif
 
 @section('content')

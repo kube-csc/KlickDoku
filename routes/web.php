@@ -115,9 +115,9 @@ Route::middleware([
         ->name('guide.images.destroy');
     Route::post('guides/{guide:id}/screenshot', [AdminImageController::class, 'storeGuideScreenshot'])
         ->name('guides.screenshot.store');
-    Route::post('tutorials/{tutorial}/screenshot', [AdminImageController::class, 'storeTutorialScreenshot'])
+    Route::post('tutorials/{tutorial:id}/screenshot', [AdminImageController::class, 'storeTutorialScreenshot'])
         ->name('tutorials.screenshot.store');
-    Route::delete('tutorials/{tutorial}/steps/{step}/screenshot', [AdminImageController::class, 'destroyTutorialScreenshot'])
+    Route::delete('tutorials/{tutorial:id}/steps/{step}/screenshot', [AdminImageController::class, 'destroyTutorialScreenshot'])
         ->name('tutorials.screenshot.destroy');
 
     // Kommentar-Moderation
@@ -136,9 +136,9 @@ Route::middleware([
         ->name('guide.step.translations.store');
     Route::delete('guides/{guide}/steps/{stepId}/translations/{locale}', [AdminStepTranslationController::class, 'destroyGuideStep'])
         ->name('guide.step.translations.destroy');
-    Route::post('tutorials/{tutorial}/steps/{stepId}/translations', [AdminStepTranslationController::class, 'storeTutorialStep'])
+    Route::post('tutorials/{tutorial:id}/steps/{stepId}/translations', [AdminStepTranslationController::class, 'storeTutorialStep'])
         ->name('tutorial.step.translations.store');
-    Route::delete('tutorials/{tutorial}/steps/{stepId}/translations/{locale}', [AdminStepTranslationController::class, 'destroyTutorialStep'])
+    Route::delete('tutorials/{tutorial:id}/steps/{stepId}/translations/{locale}', [AdminStepTranslationController::class, 'destroyTutorialStep'])
         ->name('tutorial.step.translations.destroy');
 
     // KI-Beschreibung generieren

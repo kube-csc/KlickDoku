@@ -129,8 +129,9 @@ class AdminImageController extends Controller
     }
 
     // Screenshot für Tutorial-Schritt hochladen
-    public function storeTutorialScreenshot(Request $request, Tutorial $tutorial)
+    public function storeTutorialScreenshot(Request $request, $tutorialId)
     {
+        $tutorial = Tutorial::findOrFail($tutorialId);
         \Log::info('storeTutorialScreenshot aufgerufen', [
             'tutorial_id' => $tutorial->id,
             'step_id' => $request->input('step_id'),
@@ -277,8 +278,9 @@ class AdminImageController extends Controller
     }
 
     // Screenshot von Tutorial-Schritt löschen
-    public function destroyTutorialScreenshot(Tutorial $tutorial, $step)
+    public function destroyTutorialScreenshot($tutorialId, $step)
     {
+        $tutorial = Tutorial::findOrFail($tutorialId);
         try {
             $stepModel = TutorialStep::findOrFail($step);
             
