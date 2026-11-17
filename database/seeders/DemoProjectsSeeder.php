@@ -18,7 +18,7 @@ class DemoProjectsSeeder extends Seeder
                 'name' => 'Sportverein Datteln',
                 'subdomain' => 'sportverein',
                 'domain' => null,
-                'source_domain' => 'https://www.ssv-datteln.de',
+                'source_domain' => 'https://antraege.ssv-datteln.de',
                 'app_name' => 'Vereinsverwaltung',
                 'club_name' => 'Sportverein Datteln',
                 'logo_path' => null,

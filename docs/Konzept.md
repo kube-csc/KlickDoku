@@ -1542,28 +1542,46 @@ Hotspot-Links in Tutorials werden automatisch an das aktuelle Projekt angepasst.
 
 | Mechanismus | Beschreibung | Beispiel |
 |---|---|---|
-| **Domain-Rewriting** | Ersetzt die Quelldomain (`source_domain`) durch die Projekt-Domain | `https://www.ssv-datteln.de/login` → `https://sportverein.127.0.0.1:8000/login` |
+| **Domain-Rewriting** | Überträgt den Pfad aus dem Hotspot-Link auf die `source_domain` des Projekts | `https://www.ssv-datteln.de/login` + `source_domain=https://antraege.ssv-datteln.de` → `https://antraege.ssv-datteln.de/login` |
 | **Automatische Platzhalter-Erkennung** | Erkennt Werte, die mit Platzhalter-Default-Werten übereinstimmen, und wandelt sie in Platzhalter um | `https://example.de/Veranstaltungen` → `https://example.de/{{events}}` → projekt-spezifisch |
 
 #### Domain-Rewriting
 
-**Konfiguration:** Im Projekt-Edit-Formular (`/admin/projects/{id}/edit`, Tab "Grunddaten", Bereich "Domain & Subdomain") trägt der Admin die **Quelldomain** (`source_domain`) ein — die URL der externen Anwendung, auf die die Hotspot-Links ursprünglich verweisen.
+**Konfiguration:** Im Projekt-Edit-Formular (`/admin/projects/{id}/edit`, Tab "Grunddaten", Bereich "Domain & Subdomain") trägt der Admin die **Quelldomain** (`source_domain`) ein — die URL der externen Anwendung, **auf die der Pfad übertragen werden soll**.
 
-**Ablauf:**
-1. Redakteur trägt Hotspot-Link ein: `https://www.ssv-datteln.de/mitglieder`
-2. Projekt hat `source_domain` = `https://www.ssv-datteln.de` und `subdomain` = `sportverein`
-3. Beim Anzeigen des Tutorials ersetzt `PlaceholderService::rewriteDomain()` die Quelldomain durch die berechnete Ziel-Domain
-4. Ergebnis: `https://sportverein.127.0.0.1:8000/mitglieder`
+**Ablauf (Pfad-Übernahme):**
+1. Redakteur trägt Hotspot-Link ein: `https://www.ssv-datteln.de/login`
+2. Projekt hat `source_domain` = `https://antraege.ssv-datteln.de`
+3. Beim Anzeigen des Tutorials extrahiert `PlaceholderService::rewriteDomain()` den Pfad `/login` aus dem Hotspot-Link
+4. Der Pfad wird auf die `source_domain` übertragen
+5. Ergebnis: `https://antraege.ssv-datteln.de/login`
 
-**Ziel-Domain-Berechnung (`getProjectTargetDomain`):**
+**Zwei Modi von `rewriteDomain()`:**
+1. **Exakte Übereinstimmung:** Wenn der Hotspot-Link mit der `source_domain` beginnt, wird der Pfad direkt extrahiert und auf die Ziel-Domain übertragen
+2. **Pfad-Übernahme (Standard):** Der Pfad, Query-Parameter und Fragment werden aus jeder absoluten URL (http/https) extrahiert und auf die `source_domain` übertragen. Relative Pfade (`/login`) bleiben unverändert.
+
+**Protokoll- und Subdomain-Unterstützung:**
+Das Domain-Rewriting berücksichtigt automatisch http/https-Protokolle und Subdomains:
+
+| Hotspot-Link (eingetragen) | `source_domain` (Projekt) | Ergebnis |
+|---|---|---|
+| `https://www.ssv-datteln.de/login` | `https://antraege.ssv-datteln.de` | `https://antraege.ssv-datteln.de/login` |
+| `http://www.ssv-datteln.de/login` | `https://antraege.ssv-datteln.de` | `https://antraege.ssv-datteln.de/login` (Protokollwechsel) |
+| `https://www.ssv-datteln.de/login` | `http://antraege.ssv-datteln.de` | `http://antraege.ssv-datteln.de/login` (Protokollwechsel) |
+| `http://portal.ssv-datteln.de/antraege` | `https://antraege.ssv-datteln.de` | `https://antraege.ssv-datteln.de/antraege` (Subdomain) |
+| `https://www.ssv-datteln.de/login` | `https://portal.antraege.ssv-datteln.de` | `https://portal.antraege.ssv-datteln.de/login` (Subdomain-Ziel) |
+| `/login` | `https://antraege.ssv-datteln.de` | `/login` (relativ, unverändert) |
+
+Der Protokoll des Hotspot-Links wird durch das Protokoll der `source_domain` ersetzt. Subdomains im Hotspot-Link werden ignoriert – nur der Pfad, Query-Parameter und Fragment werden übernommen.
+
+**Fallback:** Wenn keine `source_domain` gesetzt ist, wird die berechnete Projekt-Domain verwendet:
 - Bei **Subdomain**: `subdomain` + Hauptdomain aus `APP_URL` (z. B. `sportverein.127.0.0.1:8000`)
 - Bei **Domain**: Direkt aus `project.domain` (z. B. `klickdoc.ssv-datteln.de`)
-- Protokoll (http/https) wird aus `APP_URL` oder der Projekt-Domain übernommen
 
 **Methoden in `PlaceholderService`:**
-- `rewriteDomain($url, $sourceDomain, $targetDomain)` — Ersetzt Domain in einer URL
+- `rewriteDomain($url, $sourceDomain, $targetDomain)` — Ersetzt Domain in einer URL (zwei Modi: exakte Übereinstimmung + Pfad-Übernahme)
 - `rewriteHotspotDomains($hotspotData, $project)` — Wendet Domain-Rewriting auf Hotspot-Links an
-- `getProjectTargetDomain($project)` — Berechnet die Ziel-Domain eines Projekts
+- `getProjectTargetDomain($project)` — Berechnet die Fallback-Ziel-Domain eines Projekts
 
 #### Automatische Platzhalter-Erkennung
 

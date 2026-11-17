@@ -262,14 +262,17 @@ class PlaceholderService
     /**
      * Schreibt die Domain in einer URL um – von der Quelldomain zur Projekt-Domain.
      *
-     * Beispiel: source_domain = "https://www.ssv-datteln.de", project_domain = "https://klickdoc.ssv-datteln.de"
-     *   "https://www.ssv-datteln.de/login" → "https://klickdoc.ssv-datteln.de/login"
+     * Zwei Modi:
+     * 1. Exakte Übereinstimmung: source_domain = "https://www.ssv-datteln.de", URL beginnt damit
+     *    "https://www.ssv-datteln.de/login" → "https://klickdoc.ssv-datteln.de/login"
+     * 2. Pfad-Übernahme: Der Pfad aus der URL wird auf die targetDomain übertragen
+     *    "https://www.ssv-datteln.de/login" + targetDomain="https://antraege.ssv-datteln.de" → "https://antraege.ssv-datteln.de/login"
      *
      * Berücksichtigt http/https Protokoll und Subdomains.
      *
      * @param string|null $url Die URL mit der Quelldomain
      * @param string|null $sourceDomain Die Quelldomain (z.B. "https://www.ssv-datteln.de")
-     * @param string|null $targetDomain Die Ziel-Domain (z.B. "https://klickdoc.ssv-datteln.de")
+     * @param string|null $targetDomain Die Ziel-Domain (z.B. "https://antraege.ssv-datteln.de")
      * @return string Die URL mit umgeschriebener Domain
      */
     public function rewriteDomain(?string $url, ?string $sourceDomain, ?string $targetDomain): string
@@ -278,42 +281,58 @@ class PlaceholderService
             return '';
         }
 
-        // Wenn keine Quelldomain konfiguriert, URL unverändert zurückgeben
-        if (empty($sourceDomain)) {
-            return $url;
-        }
-
         // Wenn keine Ziel-Domain konfiguriert, URL unverändert zurückgeben
         if (empty($targetDomain)) {
-            return $url;
-        }
-
-        // Normalisiere Quelldomain: entferne trailing slashes
-        $sourceNormalized = rtrim($sourceDomain, '/');
-
-        // Prüfen, ob die URL mit der Quelldomain beginnt
-        if (stripos($url, $sourceNormalized) !== 0) {
-            // Die URL beginnt nicht mit der Quelldomain – nichts zu tun
             return $url;
         }
 
         // Normalisiere Ziel-Domain: entferne trailing slashes
         $targetNormalized = rtrim($targetDomain, '/');
 
-        // Extrahiere den Pfad aus der URL (alles nach der Quelldomain)
-        $path = substr($url, strlen($sourceNormalized));
+        // Falls eine Quelldomain konfiguriert ist, prüfe exakte Übereinstimmung
+        if (!empty($sourceDomain)) {
+            $sourceNormalized = rtrim($sourceDomain, '/');
 
-        // Falls der Pfad leer ist, einen Slash hinzufügen
-        if (empty($path)) {
-            $path = '/';
+            // Prüfen, ob die URL mit der Quelldomain beginnt
+            if (stripos($url, $sourceNormalized) === 0) {
+                // Extrahiere den Pfad aus der URL (alles nach der Quelldomain)
+                $path = substr($url, strlen($sourceNormalized));
+
+                // Falls der Pfad leer ist, einen Slash hinzufügen
+                if (empty($path)) {
+                    $path = '/';
+                }
+
+                return $targetNormalized . $path;
+            }
         }
 
-        return $targetNormalized . $path;
+        // Wenn keine exakte Übereinstimmung: extrahiere Pfad aus der URL und übertrage auf targetDomain
+        // Dies funktioniert auch wenn der Hotspot-Link eine andere Domain als source_domain hat
+        $parsedUrl = parse_url($url);
+        
+        // Nur absolute URLs (http/https) umschreiben
+        if (isset($parsedUrl['scheme']) && in_array(strtolower($parsedUrl['scheme']), ['http', 'https'])) {
+            $path = $parsedUrl['path'] ?? '/';
+            $query = isset($parsedUrl['query']) ? '?' . $parsedUrl['query'] : '';
+            $fragment = isset($parsedUrl['fragment']) ? '#' . $parsedUrl['fragment'] : '';
+            
+            return $targetNormalized . $path . $query . $fragment;
+        }
+
+        // Relative Pfade oder andere URLs unverändert zurückgeben
+        return $url;
     }
 
     /**
      * Wendet Domain-Rewriting auf Hotspot-Links an.
-     * Ersetzt die Quelldomain durch die Projekt-Domain in allen Hotspot-Links.
+     * Ersetzt die Domain in Hotspot-Links durch die source_domain des Projekts.
+     * Der Pfad, Query-Parameter und Fragment aus dem Hotspot-Link bleiben erhalten.
+     *
+     * Beispiel:
+     *   Hotspot-Link: "https://www.ssv-datteln.de/login"
+     *   source_domain: "https://antraege.ssv-datteln.de"
+     *   Ergebnis: "https://antraege.ssv-datteln.de/login"
      *
      * @param array $hotspotData Hotspot-Daten
      * @param Project|null $project Das aktuelle Projekt
@@ -321,19 +340,26 @@ class PlaceholderService
      */
     public function rewriteHotspotDomains(array $hotspotData, ?Project $project = null): array
     {
-        if (!$project || empty($project->source_domain)) {
+        if (!$project) {
             return $hotspotData;
         }
 
-        // Ziel-Domain zusammenbauen aus Subdomain oder Domain des Projekts
-        $targetDomain = $this->getProjectTargetDomain($project);
+        // Wenn source_domain gesetzt ist, verwende sie als Ziel-Domain
+        // Der Pfad aus dem Hotspot-Link wird auf die source_domain übertragen
+        $targetDomain = !empty($project->source_domain) ? $project->source_domain : null;
+
+        // Falls keine source_domain, versuche die berechnete Projekt-Domain
+        if (empty($targetDomain)) {
+            $targetDomain = $this->getProjectTargetDomain($project);
+        }
 
         if (empty($targetDomain)) {
             return $hotspotData;
         }
 
         if (!empty($hotspotData['link'])) {
-            $hotspotData['link'] = $this->rewriteDomain($hotspotData['link'], $project->source_domain, $targetDomain);
+            // source_domain ist hier die Ziel-Domain, keine Quelldomain zum Vergleichen
+            $hotspotData['link'] = $this->rewriteDomain($hotspotData['link'], null, $targetDomain);
         }
 
         return $hotspotData;
