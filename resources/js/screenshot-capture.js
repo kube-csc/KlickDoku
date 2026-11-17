@@ -298,7 +298,7 @@ window.startScreenshotCapture = function(tutorialId, stepId) {
 };
 
 /**
- * Startet die Screenshot-Bereichsauswahl für einen neuen Tutorial-Schritt (create.blade.php)
+ * Startet die Screenshot-Bereichsauswahl für einen neuen Tutorial-Schritt (create.blade.php / edit.blade.php)
  * Das Bild wird als Vorschau angezeigt und beim Speichern des Formulars mitgesendet.
  * @param {number} stepIndex - Index des Schritts (0-basiert)
  */
@@ -335,42 +335,100 @@ window.startScreenshotCaptureForNew = function(stepIndex) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const dataUrl = e.target.result;
-                    
-                    // Verstecktes Input-Feld für den Screenshot erstellen/aktualisieren
-                    let hiddenInput = document.getElementById('screenshot_data_' + stepIndex);
-                    if (!hiddenInput) {
-                        hiddenInput = document.createElement('input');
-                        hiddenInput.type = 'hidden';
-                        hiddenInput.id = 'screenshot_data_' + stepIndex;
-                        hiddenInput.name = 'steps[' + stepIndex + '][screenshot_data]';
-                        
-                        // Zum Schritt-Container hinzufügen
-                        const stepItem = document.querySelector(`.step-item[data-step="${stepIndex}"]`);
-                        if (stepItem) {
+
+                    const stepItem = document.querySelector(`.step-item[data-step="${stepIndex}"]`);
+                    if (!stepItem) {
+                        return;
+                    }
+
+                    // Bildabmessungen ermitteln - createImageBitmap ist zuverlässiger als img.onload bei Data-URLs
+                    createImageBitmap(imageBlob).then(bitmap => {
+                        const imgWidth = bitmap.width;
+                        const imgHeight = bitmap.height;
+
+                        // Verstecktes Input-Feld für den Screenshot aktualisieren
+                        // edit.blade.php verwendet .screenshot-data-input, create.blade.php verwendet ID-basiert
+                        let hiddenInput = stepItem.querySelector('.screenshot-data-input');
+                        if (!hiddenInput) {
+                            // Versuche ID zu finden (create.blade.php)
+                            hiddenInput = document.getElementById('screenshot_data_' + stepIndex);
+                        }
+                        if (!hiddenInput) {
+                            // Falls keines vorhanden, erstelle ein neues
+                            hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.id = 'screenshot_data_' + stepIndex;
+                            hiddenInput.name = 'steps[' + stepIndex + '][screenshot_data]';
                             stepItem.appendChild(hiddenInput);
                         }
-                    }
-                    hiddenInput.value = dataUrl;
-                    
-                    // Vorschau anzeigen
-                    const previewDiv = document.getElementById('screenshotPreview_' + stepIndex);
-                    if (previewDiv) {
-                        previewDiv.classList.remove('hidden');
-                        // Bestehendes Bild entfernen
-                        const existingImg = previewDiv.querySelector('img');
-                        if (existingImg) {
-                            existingImg.remove();
+                        hiddenInput.value = dataUrl;
+
+                        // Bildabmessungen speichern (edit.blade.php)
+                        const widthInput = stepItem.querySelector('.screenshot-width-input');
+                        const heightInput = stepItem.querySelector('.screenshot-height-input');
+                        if (widthInput) widthInput.value = imgWidth;
+                        if (heightInput) heightInput.value = imgHeight;
+
+                        // Vorschau anzeigen - im Schritt-Container suchen, nicht über globale IDs
+                        // edit.blade.php: [id^="screenshot_preview_"] (div)
+                        // create.blade.php: screenshotPreview_X (camelCase)
+                        let previewDiv = stepItem.querySelector('[id^="screenshot_preview_"]:not(img)');
+                        if (!previewDiv) {
+                            previewDiv = document.getElementById('screenshotPreview_' + stepIndex);
                         }
-                        // Neues Vorschau-Bild erstellen
-                        const img = document.createElement('img');
-                        img.src = dataUrl;
-                        img.className = 'mt-2 w-64 h-auto rounded-lg border';
-                        img.title = 'Klicken zum Vergrößern und Hotspot-Position setzen';
-                        img.onclick = function() {
-                            openHotspotEditor(dataUrl, 0, 0, String(stepIndex), '-1');
-                        };
-                        previewDiv.appendChild(img);
-                    }
+                        if (previewDiv) {
+                            previewDiv.classList.remove('hidden');
+                            // Bestehendes Bild entfernen
+                            const existingImg = previewDiv.querySelector('img');
+                            if (existingImg) {
+                                existingImg.remove();
+                            }
+                            // Neues Vorschau-Bild erstellen
+                            const previewImg = document.createElement('img');
+                            previewImg.id = 'screenshot_preview_img_' + stepIndex;
+                            previewImg.src = dataUrl;
+                            previewImg.className = 'w-64 h-auto rounded-lg border cursor-pointer';
+                            previewImg.title = 'Klicken zum Vergrößern und Hotspot-Position setzen';
+                            previewImg.onclick = function() {
+                                openHotspotEditor(dataUrl, imgWidth, imgHeight, String(stepIndex), '-1');
+                            };
+                            previewDiv.appendChild(previewImg);
+                        }
+                    }).catch(err => {
+                        console.error('Fehler beim Ermitteln der Bildabmessungen:', err);
+                        // Fallback: trotzdem anzeigen, aber ohne Abmessungen
+                        let hiddenInput = stepItem.querySelector('.screenshot-data-input');
+                        if (!hiddenInput) {
+                            hiddenInput = document.getElementById('screenshot_data_' + stepIndex);
+                        }
+                        if (!hiddenInput) {
+                            hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.id = 'screenshot_data_' + stepIndex;
+                            hiddenInput.name = 'steps[' + stepIndex + '][screenshot_data]';
+                            stepItem.appendChild(hiddenInput);
+                        }
+                        hiddenInput.value = dataUrl;
+
+                        let previewDiv = stepItem.querySelector('[id^="screenshot_preview_"]:not(img)');
+                        if (!previewDiv) {
+                            previewDiv = document.getElementById('screenshotPreview_' + stepIndex);
+                        }
+                        if (previewDiv) {
+                            previewDiv.classList.remove('hidden');
+                            const existingImg = previewDiv.querySelector('img');
+                            if (existingImg) existingImg.remove();
+                            const previewImg = document.createElement('img');
+                            previewImg.id = 'screenshot_preview_img_' + stepIndex;
+                            previewImg.src = dataUrl;
+                            previewImg.className = 'w-64 h-auto rounded-lg border cursor-pointer';
+                            previewImg.title = 'Klicken zum Vergrößern und Hotspot-Position setzen';
+                            previewImg.onclick = function() {
+                                openHotspotEditor(dataUrl, 0, 0, String(stepIndex), '-1');
+                            };
+                            previewDiv.appendChild(previewImg);
+                        }
+                    });
                 };
                 reader.readAsDataURL(imageBlob);
             }).catch((error) => {

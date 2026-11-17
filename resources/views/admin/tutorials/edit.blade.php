@@ -154,13 +154,7 @@
 
         <!-- Schritte -->
         <div class="border-t pt-6">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-medium text-gray-900">Schritte mit Hotspots</h3>
-                <button type="button" id="addStep"
-                        class="px-3 py-1 bg-purple-500 text-white text-sm rounded hover:bg-purple-600 transition">
-                    + Schritt hinzufügen
-                </button>
-            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Schritte mit Hotspots</h3>
 
             <!-- KI-Kontext für Schritte -->
             <div class="mb-4 p-3 bg-indigo-50 rounded-lg">
@@ -200,7 +194,7 @@
                         <input type="hidden" name="steps[{{ $index }}][screenshot_height]" value="{{ old("steps.$index.screenshot_height", $step->screenshot_height) }}">
                         <div>
                             <label class="block text-sm text-gray-600">Titel *</label>
-                            <input type="text" name="steps[{{ $index }}][title]" value="{{ old("steps.$index.title", $step->title) }}" required
+                            <input type="text" name="steps[{{ $index }}][title]" value="{{ old("steps.$index.title", $step->title) }}"
                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                         </div>
                         <div>
@@ -212,7 +206,7 @@
                                     ✨ KI
                                 </button>
                             </div>
-                            <textarea name="steps[{{ $index }}][instruction]" id="step_{{ $index }}_instruction" rows="3" required
+                            <textarea name="steps[{{ $index }}][instruction]" id="step_{{ $index }}_instruction" rows="3"
                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">{{ old("steps.$index.instruction", $step->instruction) }}</textarea>
                         </div>
                         <!-- Screenshot für diesen Schritt -->
@@ -346,6 +340,14 @@
                 </div>
                 @endforeach
             </div>
+
+            <!-- Schritt hinzufügen Button (unten) -->
+            <div class="mt-4">
+                <button type="button" id="addStep"
+                        class="px-3 py-1 bg-purple-500 text-white text-sm rounded hover:bg-purple-600 transition">
+                    + Schritt hinzufügen
+                </button>
+            </div>
         </div>
     </div>
 
@@ -404,6 +406,159 @@ let currentHotspotStepIndex = null;
 let currentHotspotIndex = null;
 let hotspotEditorZoom = 1.0;
 
+// Initialisiere _oldStepIndex für alle vorhandenen Schritte
+document.querySelectorAll('.step-item').forEach((step, index) => {
+    step.dataset._oldStepIndex = index;
+});
+
+// Fehlermeldung für Schritt-Felder anzeigen
+function showStepFieldError(input, message) {
+    // Rote Umrandung setzen
+    input.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+    input.classList.remove('border-gray-300', 'focus:border-blue-500', 'focus:ring-blue-500');
+
+    // Bestehende Fehlermeldung entfernen
+    const existingError = input.parentElement.querySelector('.step-field-error');
+    if (existingError) existingError.remove();
+
+    // Neue Fehlermeldung hinzufügen
+    const errorP = document.createElement('p');
+    errorP.className = 'step-field-error mt-1 text-sm text-red-600';
+    errorP.textContent = message;
+    input.parentElement.appendChild(errorP);
+}
+
+// Fehlermarkierung für ein Schritt-Feld entfernen
+function clearStepFieldError(input) {
+    input.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+    input.classList.add('border-gray-300', 'focus:border-blue-500', 'focus:ring-blue-500');
+    const existingError = input.parentElement.querySelector('.step-field-error');
+    if (existingError) existingError.remove();
+}
+
+// Alle Fehlermarkierungen in allen Schritten entfernen
+function clearAllStepFieldErrors() {
+    document.querySelectorAll('.step-field-error').forEach(el => el.remove());
+    document.querySelectorAll('.step-item input[name*="[title]"], .step-item textarea[name*="[instruction]"]').forEach(input => {
+        input.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+        input.classList.add('border-gray-300', 'focus:border-blue-500', 'focus:ring-blue-500');
+    });
+}
+
+// Live-Validierung: Fehlermarkierung entfernen wenn Benutzer tippt
+document.addEventListener('input', function(e) {
+    if (e.target.matches('.step-item input[name$="[title]"]') || e.target.matches('.step-item textarea[name$="[instruction]"]')) {
+        clearStepFieldError(e.target);
+    }
+});
+
+// Vor dem Absenden: Pflichtfelder prüfen und leere Schritte entfernen
+document.querySelector('form').addEventListener('submit', function(e) {
+    // Zuerst alle alten Fehlermarkierungen entfernen
+    clearAllStepFieldErrors();
+
+    const steps = document.querySelectorAll('.step-item');
+    const stepsToRemove = [];
+    let hasErrors = false;
+    let firstErrorInput = null;
+
+    // Pflichtfelder prüfen - alle Schritte mit leeren Pflichtfeldern zeigen Fehler
+    steps.forEach((step, stepNum) => {
+        const titleInput = step.querySelector('input[name$="[title]"]');
+        const instructionInput = step.querySelector('textarea[name$="[instruction]"]');
+
+        const titleMissing = titleInput && !titleInput.value.trim();
+        const instructionMissing = instructionInput && !instructionInput.value.trim();
+
+        // Wenn beide Felder leer sind, ist der Schritt komplett leer
+        // Wir markieren ihn trotzdem als fehlerhaft, damit der Benutzer es sieht
+        if (titleMissing && instructionMissing) {
+            // Kompletter leer - beide Felder markieren
+            showStepFieldError(titleInput, 'Bitte geben Sie einen Titel ein.');
+            showStepFieldError(instructionInput, 'Bitte geben Sie eine Beschreibung ein.');
+            hasErrors = true;
+            if (!firstErrorInput) firstErrorInput = titleInput;
+            // Schritt wird später entfernt, aber der Benutzer sieht zuerst die Fehler
+            stepsToRemove.push(step);
+        }
+        // Schritt hat mindestens einen Wert — jetzt prüfen, ob Pflichtfelder fehlen
+        else if (titleMissing) {
+            showStepFieldError(titleInput, 'Bitte geben Sie einen Titel ein.');
+            hasErrors = true;
+            if (!firstErrorInput) firstErrorInput = titleInput;
+        }
+
+        if (instructionMissing && !(titleMissing && instructionMissing)) {
+            showStepFieldError(instructionInput, 'Bitte geben Sie eine Beschreibung ein.');
+            hasErrors = true;
+            if (!firstErrorInput) firstErrorInput = instructionInput;
+        }
+    });
+
+    // Wenn Fehler vorhanden, Absenden abbrechen und zum ersten Fehler scrollen
+    if (hasErrors) {
+        e.preventDefault();
+        // Leere Schritte, die wir markiert haben, wieder zurückgeben (nicht entfernen bei Fehler)
+        stepsToRemove.forEach(step => step.style.display = 'block');
+        if (firstErrorInput) {
+            firstErrorInput.focus();
+            firstErrorInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+    }
+
+    // Keine Fehler — nun wirklich leere Schritte entfernen (falls noch welche übrig sind)
+    steps.forEach(step => {
+        const titleInput = step.querySelector('input[name$="[title]"]');
+        const instructionInput = step.querySelector('textarea[name$="[instruction]"]');
+        if (titleInput && !titleInput.value.trim() && instructionInput && !instructionInput.value.trim()) {
+            if (!stepsToRemove.includes(step)) {
+                stepsToRemove.push(step);
+            }
+        }
+    });
+
+    // Leere Schritte entfernen
+    stepsToRemove.forEach(step => step.remove());
+
+    // Indizes neu vergeben, damit steps[0], steps[1], ... lückenlos sind
+    const remainingSteps = document.querySelectorAll('.step-item');
+    remainingSteps.forEach((step, index) => {
+        step.dataset.step = index;
+        step.dataset._oldStepIndex = index;
+
+        // Alle name-Attribute aktualisieren (steps[X] und steps[X][hotspots][Y])
+        const inputs = step.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            const name = input.getAttribute('name');
+            if (name && name.startsWith('steps[')) {
+                // Zuerst steps[alteIndex] ersetzen, dann hotspots[alteIndex] innerhalb desselben Schritts
+                let newName = name.replace(/steps\[\d+\]/, `steps[${index}]`);
+                input.setAttribute('name', newName);
+            }
+        });
+
+        // Hotspot-Indizes innerhalb dieses Schritts lückenlos neu vergeben
+        const hotspotItems = step.querySelectorAll('.hotspot-item');
+        hotspotItems.forEach((hotspotItem, hIndex) => {
+            const hotspotInputs = hotspotItem.querySelectorAll('input');
+            hotspotInputs.forEach(input => {
+                const name = input.getAttribute('name');
+                if (name && name.includes('[hotspots][')) {
+                    const newName = name.replace(/\[hotspots\]\[\d+\]/, `[hotspots][${hIndex}]`);
+                    input.setAttribute('name', newName);
+                }
+            });
+        });
+    });
+
+    // Wenn keine Schritte übrig sind, Formular trotzdem absenden (steps darf leer sein)
+    if (remainingSteps.length === 0) {
+        // Alle steps-Felder entfernen, damit der Controller keine leeren Schritte validiert
+        remainingSteps.forEach(el => el.remove());
+    }
+});
+
 document.getElementById('addStep').addEventListener('click', function() {
     const stepHtml = `
     <div class="step-item bg-gray-50 p-4 rounded-lg mb-4" data-step="${stepCount}">
@@ -412,9 +567,13 @@ document.getElementById('addStep').addEventListener('click', function() {
             <button type="button" class="remove-step text-red-500 hover:text-red-700 text-sm">Entfernen</button>
         </div>
         <div class="space-y-3">
+            <input type="hidden" name="steps[${stepCount}][screenshot_path]" class="screenshot-path-input" value="">
+            <input type="hidden" name="steps[${stepCount}][screenshot_width]" class="screenshot-width-input" value="">
+            <input type="hidden" name="steps[${stepCount}][screenshot_height]" class="screenshot-height-input" value="">
+            <input type="hidden" name="steps[${stepCount}][screenshot_data]" class="screenshot-data-input" value="">
             <div>
                 <label class="block text-sm text-gray-600">Titel *</label>
-                <input type="text" name="steps[${stepCount}][title]" required
+                <input type="text" name="steps[${stepCount}][title]"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
             </div>
             <div>
@@ -426,8 +585,35 @@ document.getElementById('addStep').addEventListener('click', function() {
                         ✨ KI
                     </button>
                 </div>
-                <textarea name="steps[${stepCount}][instruction]" id="step_${stepCount}_instruction" rows="3" required
+                <textarea name="steps[${stepCount}][instruction]" id="step_${stepCount}_instruction" rows="3"
                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
+            </div>
+            <!-- Screenshot für diesen Schritt -->
+            <div class="border-t pt-3">
+                <div id="screenshot_preview_${stepCount}" class="mb-3 hidden">
+                    <p class="text-sm text-gray-600 mb-2">Screenshot:</p>
+                    <div class="relative inline-block">
+                        <img id="screenshot_preview_img_${stepCount}" src="" alt="Screenshot" class="w-64 h-auto rounded-lg border cursor-pointer" title="Klicken zum Vergrößern und Hotspot-Position setzen">
+                        <button type="button" onclick="removeScreenshot(${stepCount})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600" title="Screenshot löschen">
+                            ✕
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">🔍 Auf das Bild klicken, um Hotspot-Positionen visuell zu setzen</p>
+                </div>
+                <div class="flex gap-2 items-end">
+                    <div class="flex-1">
+                        <label class="block text-sm text-gray-600">Screenshot hochladen</label>
+                        <input type="file" accept="image/*" onchange="uploadScreenshotToStep(${stepCount}, this)"
+                               class="mt-1 block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700">
+                    </div>
+                    <div>
+                        <button type="button" onclick="startScreenshotCaptureForNew(${stepCount})"
+                                class="mt-1 px-3 py-2 bg-green-500 text-white text-xs rounded hover:bg-green-600 whitespace-nowrap"
+                                title="Wählen Sie einen Bereich auf dem Bildschirm aus, der als Screenshot hochgeladen wird">
+                            📸 Screenshot mit Bereichsauswahl
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="border-t pt-3">
                 <div class="flex justify-between items-center mb-2">
@@ -444,6 +630,11 @@ document.getElementById('addStep').addEventListener('click', function() {
     </div>`;
 
     document.getElementById('stepsContainer').insertAdjacentHTML('beforeend', stepHtml);
+    // Initialisiere _oldStepIndex für den neuen Schritt, damit updateStepNumbers() die Index-Änderungen korrekt verfolgt
+    const newStep = document.querySelector(`.step-item[data-step="${stepCount}"]`);
+    if (newStep) {
+        newStep.dataset._oldStepIndex = stepCount;
+    }
     stepCount++;
     updateStepNumbers();
 });
@@ -460,9 +651,10 @@ document.addEventListener('click', function(e) {
         const hotspotsContainer = step.querySelector('.hotspots-container');
         const hotspotCount = hotspotsContainer.children.length;
 
-        // Screenshot-URL aus dem Schritt holen (falls vorhanden)
+        // Screenshot aus dem Schritt holen (falls vorhanden) - unterstützt sowohl serverseitige Pfade als auch Base64-Daten
         const screenshotPath = step.querySelector('input[name$="[screenshot_path]"]');
-        const hasScreenshot = screenshotPath && screenshotPath.value;
+        const screenshotData = step.querySelector('.screenshot-data-input');
+        const hasScreenshot = (screenshotPath && screenshotPath.value) || (screenshotData && screenshotData.value);
 
         const hotspotHtml = `
         <div class="hotspot-item flex gap-2 mb-2 items-center">
@@ -479,8 +671,8 @@ document.addEventListener('click', function(e) {
                    placeholder="Link (optional)"
                    class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
             <span class="hotspot-pos-display text-xs text-gray-500 whitespace-nowrap" data-hotspot="${hotspotCount}">-</span>
-            ${hasScreenshot ? `<button type="button" onclick="openHotspotEditor('', 0, 0, '${stepIndex}', '${hotspotCount}')"
-                    class="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 whitespace-nowrap" title="Position auf dem Bild setzen">📍 Position</button>` : ''}
+            <button type="button" onclick="openHotspotForNewStep('${stepIndex}', '${hotspotCount}')"
+                    class="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 whitespace-nowrap ${!hasScreenshot ? 'hidden' : ''}" title="Position auf dem Bild setzen">📍 Position</button>
             <button type="button" class="remove-hotspot text-red-500 hover:text-red-700 text-sm">✕</button>
         </div>`;
 
@@ -495,8 +687,186 @@ document.addEventListener('click', function(e) {
 function updateStepNumbers() {
     const steps = document.querySelectorAll('.step-item');
     steps.forEach((step, index) => {
+        // Anzeige aktualisieren
         step.querySelector('h4').textContent = `Schritt ${index + 1}`;
+
+        // data-step Attribut aktualisieren
+        step.dataset.step = index;
+
+        // Alle Input-Felder, Textareas und Selects umbenennen
+        const inputs = step.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            const name = input.getAttribute('name');
+            if (name && name.startsWith('steps[')) {
+                // steps[alteIndex][...] -> steps[neueIndex][...]
+                const newName = name.replace(/steps\[\d+\]/, `steps[${index}]`);
+                input.setAttribute('name', newName);
+            }
+        });
+
+        // Hotspot-Indizes innerhalb dieses Schritts lückenlos neu vergeben
+        const hotspotItems = step.querySelectorAll('.hotspot-item');
+        hotspotItems.forEach((hotspotItem, hIndex) => {
+            const hotspotInputs = hotspotItem.querySelectorAll('input');
+            hotspotInputs.forEach(input => {
+                const name = input.getAttribute('name');
+                if (name && name.includes('[hotspots][')) {
+                    const newName = name.replace(/\[hotspots\]\[\d+\]/, `[hotspots][${hIndex}]`);
+                    input.setAttribute('name', newName);
+                }
+            });
+        });
+
+        // IDs für Screenshot-Vorschau aktualisieren
+        const oldStepIndex = step.dataset._oldStepIndex;
+        if (oldStepIndex && oldStepIndex !== index) {
+            // Screenshot Preview IDs aktualisieren
+            const oldPreviewDiv = document.getElementById(`screenshot_preview_${oldStepIndex}`);
+            const oldPreviewImg = document.getElementById(`screenshot_preview_img_${oldStepIndex}`);
+            const oldInstruction = document.getElementById(`step_${oldStepIndex}_instruction`);
+
+            if (oldPreviewDiv) oldPreviewDiv.id = `screenshot_preview_${index}`;
+            if (oldPreviewImg) oldPreviewImg.id = `screenshot_preview_img_${index}`;
+            if (oldInstruction) oldInstruction.id = `step_${index}_instruction`;
+        }
+
+        // onclick-Handler und IDs immer aktualisieren (auch für neue Schritte)
+        const fileInput = step.querySelector('input[type="file"]');
+        if (fileInput) {
+            fileInput.setAttribute('onchange', `uploadScreenshotToStep(${index}, this)`);
+        }
+
+        // removeScreenshot Button aktualisieren
+        const removeBtn = step.querySelector('button[onclick*="removeScreenshot"]');
+        if (removeBtn) {
+            removeBtn.setAttribute('onclick', `removeScreenshot(${index})`);
+        }
+
+        // KI-Button für Instruction aktualisieren
+        const aiBtn = step.querySelector('button[onclick*="aiGenerateStepText"]');
+        if (aiBtn) {
+            aiBtn.setAttribute('onclick', `aiGenerateStepText(${index}, 'instruction', 'tutorial_step')`);
+        }
+
+        // Screenshot-Capture-Button aktualisieren
+        const captureBtn = step.querySelector('button[onclick*="startScreenshotCaptureForNew"]');
+        if (captureBtn) {
+            captureBtn.setAttribute('onclick', `startScreenshotCaptureForNew(${index})`);
+        }
+
+        // Speichere den aktuellen Index für das nächste Mal
+        step.dataset._oldStepIndex = index;
     });
+}
+
+// Screenshot für neuen Schritt als Base64 konvertieren und im Formular speichern
+function uploadScreenshotToStep(stepIndex, input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    // Dateigröße prüfen (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        alert('Die Datei ist zu groß. Maximale Größe: 5MB');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64Data = e.target.result;
+
+        // Bildabmessungen ermitteln - createImageBitmap ist zuverlässiger als img.onload
+        createImageBitmap(file).then(bitmap => {
+            const imgWidth = bitmap.width;
+            const imgHeight = bitmap.height;
+
+            const stepItem = document.querySelector(`.step-item[data-step="${stepIndex}"]`);
+            if (!stepItem) return;
+
+            // Hidden-Fields aktualisieren
+            stepItem.querySelector('.screenshot-data-input').value = base64Data;
+            stepItem.querySelector('.screenshot-width-input').value = imgWidth;
+            stepItem.querySelector('.screenshot-height-input').value = imgHeight;
+
+            // Vorschau anzeigen - im Schritt-Container suchen, nicht über globale IDs
+            const previewDiv = stepItem.querySelector('[id^="screenshot_preview_"]:not(img)');
+            const previewImg = stepItem.querySelector('img[id^="screenshot_preview_img_"]');
+            if (previewDiv && previewImg) {
+                previewImg.src = base64Data;
+                previewDiv.classList.remove('hidden');
+                // Klick-Event für Hotspot-Editor
+                previewImg.onclick = function() {
+                    openHotspotEditor(base64Data, imgWidth, imgHeight, stepIndex, -1);
+                };
+            }
+        }).catch(err => {
+            console.error('Fehler beim Ermitteln der Bildabmessungen:', err);
+            // Fallback: trotzdem speichern, Vorschau ohne Abmessungen
+            stepItem.querySelector('.screenshot-data-input').value = base64Data;
+            const previewDiv = stepItem.querySelector('[id^="screenshot_preview_"]:not(img)');
+            const previewImg = stepItem.querySelector('img[id^="screenshot_preview_img_"]');
+            if (previewDiv && previewImg) {
+                previewImg.src = base64Data;
+                previewDiv.classList.remove('hidden');
+                previewImg.onclick = function() {
+                    openHotspotEditor(base64Data, 0, 0, stepIndex, -1);
+                };
+            }
+        });
+    };
+    reader.readAsDataURL(file);
+}
+
+// Screenshot aus neuem Schritt entfernen
+function removeScreenshot(stepIndex) {
+    const stepItem = document.querySelector(`.step-item[data-step="${stepIndex}"]`);
+    if (!stepItem) return;
+
+    stepItem.querySelector('.screenshot-data-input').value = '';
+    stepItem.querySelector('.screenshot-width-input').value = '';
+    stepItem.querySelector('.screenshot-height-input').value = '';
+    stepItem.querySelector('.screenshot-path-input').value = '';
+
+    const previewDiv = stepItem.querySelector('[id^="screenshot_preview_"]:not(img)');
+    if (previewDiv) {
+        previewDiv.classList.add('hidden');
+    }
+}
+
+// Hotspot-Editor für neuen Schritt öffnen (unterstützt Base64-Bilder)
+function openHotspotForNewStep(stepIndex, hotspotIndex) {
+    const stepItem = document.querySelector(`.step-item[data-step="${stepIndex}"]`);
+    if (!stepItem) return;
+
+    // Base64-Daten oder serverseitigen Pfad holen
+    const screenshotData = stepItem.querySelector('.screenshot-data-input');
+    const screenshotPath = stepItem.querySelector('input[name$="[screenshot_path]"]');
+    const screenshotWidth = stepItem.querySelector('.screenshot-width-input');
+    const screenshotHeight = stepItem.querySelector('.screenshot-height-input');
+
+    let imageSrc = '';
+    let width = 0;
+    let height = 0;
+
+    if (screenshotData && screenshotData.value) {
+        imageSrc = screenshotData.value;
+        width = parseInt(screenshotWidth?.value || 0);
+        height = parseInt(screenshotHeight?.value || 0);
+    } else if (screenshotPath && screenshotPath.value) {
+        // Serverseitiger Pfad - Vorschau-Bild verwenden
+        const previewImg = stepItem.querySelector('img[onclick*="openHotspotEditor"]');
+        if (previewImg) {
+            imageSrc = previewImg.src;
+        }
+        width = parseInt(screenshotWidth?.value || 0);
+        height = parseInt(screenshotHeight?.value || 0);
+    }
+
+    if (!imageSrc) {
+        alert('Kein Screenshot vorhanden.');
+        return;
+    }
+
+    openHotspotEditor(imageSrc, width, height, stepIndex, hotspotIndex);
 }
 
 function uploadScreenshot(tutorialId, stepId, input) {
