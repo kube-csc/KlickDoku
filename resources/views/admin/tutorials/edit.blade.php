@@ -4,7 +4,7 @@
 @section('heading', 'Tutorial bearbeiten')
 
 @section('content')
-<form action="{{ route('admin.tutorials.update', $tutorial) }}" method="POST" novalidate>
+<form action="{{ route('admin.tutorials.update', $tutorial) }}" method="POST" enctype="multipart/form-data" novalidate>
     @csrf
     @method('PUT')
     
@@ -79,10 +79,24 @@
                 </div>
                 <div>
                     <label for="og_image" class="block text-sm font-medium text-gray-700">OpenGraph-Bild (optional)</label>
-                    <input type="text" name="og_image" id="og_image" value="{{ old('og_image', $tutorial->og_image) }}"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                           placeholder="Pfad zum Bild, z.B. storage/tutorial-bilder/og-image.jpg">
-                    <p class="mt-1 text-xs text-gray-500">Wird bei Social-Media-Shares angezeigt (empfohlen: 1200x630px)</p>
+                    
+                    @if($tutorial->og_image)
+                    <div class="mt-2 mb-3">
+                        <img src="{{ asset($tutorial->og_image) }}" alt="Aktuelles OG-Bild"
+                             class="max-w-xs rounded-lg border border-gray-200">
+                        <p class="mt-1 text-xs text-gray-500">Aktuelles Bild</p>
+                    </div>
+                    @endif
+
+                    <input type="file" name="og_image" id="og_image" accept="image/*"
+                           class="mt-1 block w-full text-sm text-gray-500 file:mr-2 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100">
+                    <div id="og_image_preview" class="mt-2 hidden">
+                        <img id="og_image_preview_img" src="" alt="Vorschau" class="max-w-xs rounded-lg border border-gray-200">
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Wird bei Social-Media-Shares angezeigt (empfohlen: 1200x630px, max. 5MB)</p>
+                    @error('og_image')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
             </div>
         </div>
@@ -445,7 +459,7 @@ document.addEventListener('click', function(e) {
         
         const hotspotHtml = `
         <div class="hotspot-item flex gap-2 mb-2 items-center">
-            <input type="hidden" name="steps[${stepIndex}][hotspots][${hotspotCount}][hotspot_type]" value="circle">
+            <input type="hidden" name="steps[${stepIndex}][hotspots][${hotspotCount}][hotspot_type]" value="click">
             <input type="hidden" name="steps[${stepIndex}][hotspots][${hotspotCount}][position_x]" value="">
             <input type="hidden" name="steps[${stepIndex}][hotspots][${hotspotCount}][position_y]" value="">
             <input type="text" name="steps[${stepIndex}][hotspots][${hotspotCount}][selector]" 
@@ -714,7 +728,7 @@ function setHotspotPosition(event) {
         
         const hotspotHtml = `
         <div class="hotspot-item flex gap-2 mb-2 items-center">
-            <input type="hidden" name="steps[${currentHotspotStepIndex}][hotspots][${hotspotCount}][hotspot_type]" value="circle">
+            <input type="hidden" name="steps[${currentHotspotStepIndex}][hotspots][${hotspotCount}][hotspot_type]" value="click">
             <input type="hidden" name="steps[${currentHotspotStepIndex}][hotspots][${hotspotCount}][position_x]" value="${posX}">
             <input type="hidden" name="steps[${currentHotspotStepIndex}][hotspots][${hotspotCount}][position_y]" value="${posY}">
             <input type="text" name="steps[${currentHotspotStepIndex}][hotspots][${hotspotCount}][selector]" 
@@ -1017,6 +1031,27 @@ async function aiGenerateStepText(stepIndex, field, type) {
             btn.textContent = '✨ KI';
         }
     }
+}
+
+// OpenGraph-Bild Vorschau
+const ogImageInput = document.getElementById('og_image');
+if (ogImageInput) {
+    ogImageInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const preview = document.getElementById('og_image_preview');
+        const previewImg = document.getElementById('og_image_preview_img');
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                preview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.classList.add('hidden');
+        }
+    });
 }
 </script>
 @endsection

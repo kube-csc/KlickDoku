@@ -12,6 +12,7 @@ use App\Helpers\CacheHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\ImageManager;
 
 class AdminTutorialController extends Controller
 {
@@ -41,7 +42,7 @@ class AdminTutorialController extends Controller
             'published' => 'boolean',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
-            'og_image' => 'nullable|string|max:255',
+            'og_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'steps' => 'nullable|array',
             'steps.*.title' => 'required_with:steps|string|max:255',
             'steps.*.instruction' => 'required_with:steps|string',
@@ -58,6 +59,12 @@ class AdminTutorialController extends Controller
             'steps.*.screenshot_data' => 'nullable|string|sometimes',
         ]);
 
+        // OpenGraph-Bild hochladen
+        $ogImagePath = null;
+        if ($request->hasFile('og_image')) {
+            $ogImagePath = $this->compressAndStore($request->file('og_image'), 'tutorials/' . 'new');
+        }
+
         $tutorial = Tutorial::create([
             'title' => $validated['title'],
             'description' => $validated['description'],
@@ -67,8 +74,15 @@ class AdminTutorialController extends Controller
             'author_id' => auth()->id(),
             'meta_title' => $validated['meta_title'] ?? null,
             'meta_description' => $validated['meta_description'] ?? null,
-            'og_image' => $validated['og_image'] ?? null,
+            'og_image' => $ogImagePath,
         ]);
+
+        // OG-Bild-Pfad nach Erstellung korrigieren (von 'new' zur tatsächlichen ID)
+        if ($ogImagePath) {
+            $newPath = str_replace('tutorials/new/', 'tutorials/' . $tutorial->id . '/', $ogImagePath);
+            Storage::disk('public')->move($ogImagePath, $newPath);
+            $tutorial->update(['og_image' => $newPath]);
+        }
 
         // Tags zuweisen
         if (!empty($validated['tags'])) {
@@ -159,7 +173,7 @@ class AdminTutorialController extends Controller
             'published' => 'boolean',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
-            'og_image' => 'nullable|string|max:255',
+            'og_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'steps' => 'nullable|array',
             'steps.*.title' => 'required_with:steps|string|max:255',
             'steps.*.instruction' => 'required_with:steps|string',
@@ -176,6 +190,16 @@ class AdminTutorialController extends Controller
             'steps.*.screenshot_data' => 'nullable|string|sometimes',
         ]);
 
+        // OpenGraph-Bild hochladen
+        $ogImagePath = $tutorial->og_image;
+        if ($request->hasFile('og_image')) {
+            // Altes OG-Bild löschen
+            if ($tutorial->og_image) {
+                Storage::disk('public')->delete($tutorial->og_image);
+            }
+            $ogImagePath = $this->compressAndStore($request->file('og_image'), 'tutorials/' . $tutorial->id);
+        }
+
         $tutorial->update([
             'title' => $validated['title'],
             'description' => $validated['description'],
@@ -184,7 +208,7 @@ class AdminTutorialController extends Controller
             'published' => $request->has('published'),
             'meta_title' => $validated['meta_title'] ?? null,
             'meta_description' => $validated['meta_description'] ?? null,
-            'og_image' => $validated['og_image'] ?? null,
+            'og_image' => $ogImagePath,
         ]);
 
         // Tags synchronisieren
@@ -280,5 +304,28 @@ class AdminTutorialController extends Controller
 
         return redirect()->route('admin.tutorials.index')
             ->with('success', 'Tutorial erfolgreich gelöscht.');
+    }
+
+    /**
+     * Bild komprimieren und speichern.
+     * Maximale Breite: 1920px, Qualität: 80%.
+     */
+    protected function compressAndStore($file, $directory)
+    {
+        $manager = ImageManager::gd();
+        $image = $manager->read($file->getPathname());
+
+        // Auf maximale Breite von 1920px skalieren
+        $image->scaleDown(1920, null);
+
+        $extension = $file->getClientOriginalExtension();
+        $filename = Str::uuid() . '.' . $extension;
+        $path = $directory . '/' . $filename;
+
+        // Komprimiertes Bild speichern
+        $contents = $image->encodeByExtension($extension, quality: 80);
+        Storage::disk('public')->put($path, $contents);
+
+        return $path;
     }
 }
