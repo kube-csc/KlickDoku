@@ -169,11 +169,35 @@
                                     font-size: 12px;
                                     border-radius: 4px;
                                     white-space: nowrap;
-                                    opacity: 0;
+                                    opacity: 1;
                                     transition: opacity 0.2s;
                                     pointer-events: none;
                                  ">
                                 {{ $hotspot['label'] }}
+                            </div>
+                        @endif
+                        <!-- Link-Anzeige -->
+                        @if($hotspot['link'])
+                            <div class="hotspot-link-display"
+                                 style="
+                                    position: absolute;
+                                    top: 100%;
+                                    left: 50%;
+                                    transform: translateX(-50%);
+                                    margin-top: 8px;
+                                    padding: 4px 8px;
+                                    background: rgba(37, 99, 235, 0.9);
+                                    color: white;
+                                    font-size: 11px;
+                                    border-radius: 4px;
+                                    white-space: nowrap;
+                                    opacity: 1;
+                                    pointer-events: none;
+                                    max-width: 250px;
+                                    overflow: hidden;
+                                    text-overflow: ellipsis;
+                                 ">
+                                🔗 {{ $hotspot['link'] }}
                             </div>
                         @endif
                     </div>
@@ -406,9 +430,22 @@
                     transform: translateX(-50%); margin-bottom: 8px;
                     padding: 4px 8px; background: rgba(0,0,0,0.8);
                     color: white; font-size: 12px; border-radius: 4px;
-                    white-space: nowrap; opacity: 0;
+                    white-space: nowrap; opacity: 1;
                     transition: opacity 0.2s; pointer-events: none;
                 ">${hotspot.label}</div>
+                ` : ''}
+                ${hotspot.link ? `
+                <div class="hotspot-link-display" style="
+                    position: absolute; top: 100%; left: 50%;
+                    transform: translateX(-50%); margin-top: 8px;
+                    padding: 4px 8px; background: rgba(37, 99, 235, 0.9);
+                    color: white; font-size: 11px; border-radius: 4px;
+                    white-space: nowrap; opacity: 1;
+                    pointer-events: none;
+                    max-width: 250px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                ">🔗 ${hotspot.link}</div>
                 ` : ''}
             `;
 

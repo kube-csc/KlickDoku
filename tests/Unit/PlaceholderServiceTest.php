@@ -188,4 +188,296 @@ class PlaceholderServiceTest extends TestCase
         $placeholders = $this->service->getAllPlaceholders();
         $this->assertArrayHasKey('test_placeholder', $placeholders);
     }
+
+    public function test_rewriteDomain_kel_datteln_to_antraege_ssv_datteln(): void
+    {
+        // Hotspot-Link von kel-datteln.de soll auf antraege.ssv-datteln.de umgeschrieben werden
+        $url = 'https://www.kel-datteln.de/user/profile';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile', $result);
+    }
+
+    public function test_rewriteDomain_with_source_domain_exact_match(): void
+    {
+        // Exakte Übereinstimmung mit source_domain
+        $url = 'https://www.kel-datteln.de/user/profile';
+        $sourceDomain = 'https://www.kel-datteln.de';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, $sourceDomain, $targetDomain);
+
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile', $result);
+    }
+
+    public function test_rewriteDomain_preserves_query_parameters(): void
+    {
+        $url = 'https://www.kel-datteln.de/user/profile?tab=settings';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile?tab=settings', $result);
+    }
+
+    public function test_rewriteDomain_preserves_fragment(): void
+    {
+        $url = 'https://www.kel-datteln.de/user/profile#section1';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile#section1', $result);
+    }
+
+    public function test_rewriteHotspotDomains_with_project_source_domain(): void
+    {
+        $project = Project::create([
+            'name' => 'Testprojekt',
+            'slug' => 'testprojekt',
+            'app_name' => 'TestApp',
+            'club_name' => 'TestClub',
+            'source_domain' => 'https://antraege.ssv-datteln.de',
+        ]);
+
+        $hotspotData = [
+            'link' => 'https://www.kel-datteln.de/user/profile',
+            'label' => 'Profil öffnen',
+        ];
+
+        $result = $this->service->rewriteHotspotDomains($hotspotData, $project);
+
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile', $result['link']);
+        $this->assertEquals('Profil öffnen', $result['label']);
+    }
+
+    public function test_rewriteDomain_returns_empty_for_null_url(): void
+    {
+        $result = $this->service->rewriteDomain(null, null, 'https://antraege.ssv-datteln.de');
+        $this->assertEquals('', $result);
+    }
+
+    public function test_rewriteDomain_returns_url_unchanged_without_target(): void
+    {
+        $url = 'https://www.kel-datteln.de/user/profile';
+        $result = $this->service->rewriteDomain($url, null, null);
+        $this->assertEquals($url, $result);
+    }
+
+    public function test_rewriteDomain_leaves_relative_paths_unchanged(): void
+    {
+        $url = '/user/profile';
+        $result = $this->service->rewriteDomain($url, null, 'https://antraege.ssv-datteln.de');
+        $this->assertEquals('/user/profile', $result);
+    }
+
+    // === Umfassende Tests für Domain-Erkennung und -Ersetzung ===
+
+    public function test_domain_recognition_protocol_subdomain_domain_tld(): void
+    {
+        // Test: Der gesamte Domain-Teil (Protokoll + Subdomain + Domain + TLD) soll erkannt und ersetzt werden
+        // URL-Struktur: https://www.kel-datteln.de/user/profile
+        // Domain-Teil:  https://www.kel-datteln.de (Protokoll + Subdomain + Domain + TLD)
+        // Pfad-Teil:    /user/profile (soll erhalten bleiben)
+        
+        $url = 'https://www.kel-datteln.de/user/profile';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        // Der Domain-Teil "https://www.kel-datteln.de" wird durch "https://antraege.ssv-datteln.de" ersetzt
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile', $result);
+    }
+
+    public function test_domain_recognition_without_www(): void
+    {
+        // URL ohne Subdomain (www)
+        $url = 'https://kel-datteln.de/user/profile';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile', $result);
+    }
+
+    public function test_domain_recognition_with_http(): void
+    {
+        // HTTP statt HTTPS
+        $url = 'http://www.kel-datteln.de/user/profile';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        // Protokoll wird durch das Protokoll der Ziel-Domain ersetzt
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile', $result);
+    }
+
+    public function test_domain_recognition_with_port(): void
+    {
+        // URL mit Port-Nummer
+        $url = 'https://www.kel-datteln.de:8080/user/profile';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        // Port wird entfernt, da er Teil des Domain-Teils ist
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile', $result);
+    }
+
+    public function test_domain_recognition_with_complex_path(): void
+    {
+        // Komplexer Pfad mit mehreren Segmenten
+        $url = 'https://www.kel-datteln.de/user/profile/settings/account';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile/settings/account', $result);
+    }
+
+    public function test_domain_recognition_with_query_and_fragment(): void
+    {
+        // URL mit Query-Parameter UND Fragment
+        $url = 'https://www.kel-datteln.de/user/profile?tab=settings#section1';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        // Query und Fragment bleiben erhalten
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile?tab=settings#section1', $result);
+    }
+
+    public function test_domain_recognition_with_multiple_query_parameters(): void
+    {
+        // Multiple Query-Parameter
+        $url = 'https://www.kel-datteln.de/user/profile?tab=settings&action=edit&redirect=/home';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile?tab=settings&action=edit&redirect=/home', $result);
+    }
+
+    public function test_domain_recognition_with_subdomain(): void
+    {
+        // URL mit anderer Subdomain
+        $url = 'https://app.kel-datteln.de/user/profile';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        // Die gesamte Domain (inklusive Subdomain) wird ersetzt
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile', $result);
+    }
+
+    public function test_domain_recognition_with_deep_subdomain(): void
+    {
+        // URL mit verschachtelter Subdomain
+        $url = 'https://test.app.kel-datteln.de/user/profile';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile', $result);
+    }
+
+    public function test_domain_recognition_root_path(): void
+    {
+        // URL ohne Pfad (nur Domain)
+        $url = 'https://www.kel-datteln.de';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        $this->assertEquals('https://antraege.ssv-datteln.de/', $result);
+    }
+
+    public function test_domain_recognition_with_trailing_slash(): void
+    {
+        // URL mit trailing slash
+        $url = 'https://www.kel-datteln.de/user/profile/';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile/', $result);
+    }
+
+    public function test_domain_recognition_different_tld(): void
+    {
+        // Verschiedene TLDs
+        $url = 'https://www.kel-datteln.com/user/profile';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile', $result);
+    }
+
+    public function test_domain_recognition_with_special_characters_in_path(): void
+    {
+        // Pfad mit Sonderzeichen
+        $url = 'https://www.kel-datteln.de/user/my-profile%20v2/settings';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/my-profile%20v2/settings', $result);
+    }
+
+    public function test_url_structure_breakdown(): void
+    {
+        // Dieser Test dokumentiert die URL-Struktur und welche Teile ersetzt werden
+        $url = 'https://www.kel-datteln.de/user/profile?tab=settings#section1';
+        
+        // parse_url() zerlegt die URL in:
+        // scheme:   https
+        // host:     www.kel-datteln.de
+        // path:     /user/profile
+        // query:    tab=settings
+        // fragment: section1
+        
+        // Der Domain-Teil = scheme + host = https://www.kel-datteln.de
+        // Der Pfad-Teil = path + query + fragment = /user/profile?tab=settings#section1
+        
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+        
+        // Nur der Domain-Teil wird ersetzt
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile?tab=settings#section1', $result);
+        
+        // Verifizieren, dass der Pfad unverändert ist
+        $this->assertStringContainsString('/user/profile', $result);
+        // Verifizieren, dass der Query-Parameter unverändert ist
+        $this->assertStringContainsString('?tab=settings', $result);
+        // Verifizieren, dass das Fragment unverändert ist
+        $this->assertStringContainsString('#section1', $result);
+    }
+
+    public function test_rewriteHotspotDomains_full_scenario(): void
+    {
+        // Vollständiges Szenario: Hotspot-Link mit projects.source_domain
+        $project = Project::create([
+            'name' => 'SSV Datteln',
+            'slug' => 'ssv-datteln',
+            'app_name' => 'SSV Anträge',
+            'club_name' => 'SSV Datteln',
+            'source_domain' => 'https://antraege.ssv-datteln.de',
+        ]);
+
+        $hotspotData = [
+            'link' => 'https://www.kel-datteln.de/user/profile?tab=settings#section1',
+            'label' => 'Profil öffnen',
+            'description' => 'Zum Profil gehen',
+        ];
+
+        $result = $this->service->rewriteHotspotDomains($hotspotData, $project);
+
+        // Domain ersetzt, Pfad + Query + Fragment erhalten
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile?tab=settings#section1', $result['link']);
+        $this->assertEquals('Profil öffnen', $result['label']);
+        $this->assertEquals('Zum Profil gehen', $result['description']);
+    }
 }
