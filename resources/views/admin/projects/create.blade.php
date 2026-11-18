@@ -60,7 +60,7 @@
                     <p class="text-xs text-gray-500 mt-1">Optional – für Projekt-Erkennung auf externer Domain</p>
                     @error('domain')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                 </div>
-                <div>
+                <div class="md:col-span-3">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Quelldomain (externe Anwendung)</label>
                     <input type="text" name="source_domain" value="{{ old('source_domain') }}"
                            placeholder="z.B. https://www.ssv-datteln.de"

@@ -81,7 +81,7 @@
 
             <div class="bg-white rounded-lg shadow p-6 mb-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Domain & Subdomain</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Subdomain</label>
                         <input type="text" name="subdomain" value="{{ old('subdomain', $project->subdomain) }}"
@@ -98,7 +98,7 @@
                         <p class="text-xs text-gray-500 mt-1">Optional – für Projekt-Erkennung auf externer Domain</p>
                         @error('domain')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
-                    <div class="md:col-span-2">
+                    <div class="md:col-span-3">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Quelldomain (externe Anwendung)</label>
                         <input type="text" name="source_domain" value="{{ old('source_domain', $project->source_domain) }}"
                                placeholder="z.B. https://www.ssv-datteln.de"
