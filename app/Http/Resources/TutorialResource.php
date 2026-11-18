@@ -76,8 +76,8 @@ class TutorialResource extends JsonResource
                             // Domain-Rewriting: Quelldomain durch Projekt-Domain ersetzen
                             $hotspotData['link'] = $ps->rewriteDomain(
                                 $hotspotData['link'],
-                                $p?->source_domain,
-                                $ps->getProjectTargetDomain($p)
+                                null,
+                                $p?->source_domain ?? $ps->getProjectTargetDomain($p)
                             );
                             return $hotspotData;
                         });

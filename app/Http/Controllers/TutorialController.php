@@ -105,8 +105,8 @@ class TutorialController extends Controller
                     // Domain-Rewriting: Quelldomain durch Projekt-Domain ersetzen
                     $hotspotData['link'] = $placeholderService->rewriteDomain(
                         $hotspotData['link'],
-                        $project?->source_domain,
-                        $placeholderService->getProjectTargetDomain($project)
+                        null,
+                        $project?->source_domain ?? $placeholderService->getProjectTargetDomain($project)
                     );
                     return $hotspotData;
                 })->values()->all(),
