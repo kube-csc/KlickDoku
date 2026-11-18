@@ -480,4 +480,79 @@ class PlaceholderServiceTest extends TestCase
         $this->assertEquals('Profil öffnen', $result['label']);
         $this->assertEquals('Zum Profil gehen', $result['description']);
     }
+
+    // === Tests für IP-Adressen ===
+
+    public function test_rewriteDomain_with_ip_address(): void
+    {
+        // IP-Adresse als Host: http://sportverein.127.0.0.1/login
+        // parse_url() erkennt "sportverein" als user und "127.0.0.1" als host
+        // Der gesamte Domain-Teil (scheme + user@host) soll ersetzt werden
+        $url = 'http://sportverein.127.0.0.1/login';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        // IP-Adresse wird ersetzt, Pfad bleibt erhalten
+        $this->assertEquals('https://antraege.ssv-datteln.de/login', $result);
+    }
+
+    public function test_rewriteDomain_with_ip_address_and_port(): void
+    {
+        // IP-Adresse mit Port
+        $url = 'http://127.0.0.1:8080/user/profile';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        $this->assertEquals('https://antraege.ssv-datteln.de/user/profile', $result);
+    }
+
+    public function test_rewriteDomain_with_ip_address_and_query(): void
+    {
+        // IP-Adresse mit Query-Parametern
+        $url = 'http://192.168.1.100/login?redirect=/dashboard';
+        $targetDomain = 'https://antraege.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        $this->assertEquals('https://antraege.ssv-datteln.de/login?redirect=/dashboard', $result);
+    }
+
+    public function test_rewriteDomain_with_ip_address_subdomain_like_prefix(): void
+    {
+        // URL wie http://sportverein.127.0.0.1/login (sportverein sieht aus wie Subdomain)
+        $url = 'http://sportverein.127.0.0.1/login';
+        $targetDomain = 'https://klickdoc.ssv-datteln.de';
+
+        $result = $this->service->rewriteDomain($url, null, $targetDomain);
+
+        // parse_url() interpretiert "sportverein" als username und "127.0.0.1" als host
+        // Der Pfad /login bleibt erhalten
+        $this->assertEquals('https://klickdoc.ssv-datteln.de/login', $result);
+    }
+
+    public function test_rewriteHotspotDomains_with_ip_address(): void
+    {
+        // Vollständiges Szenario: Hotspot-Link mit IP-Adresse und projects.source_domain
+        $project = Project::create([
+            'name' => 'Testprojekt IP',
+            'slug' => 'testprojekt-ip',
+            'app_name' => 'TestApp',
+            'club_name' => 'TestClub',
+            'source_domain' => 'https://antraege.ssv-datteln.de',
+        ]);
+
+        $hotspotData = [
+            'link' => 'http://sportverein.127.0.0.1/login',
+            'label' => 'Login',
+            'description' => 'Einloggen',
+        ];
+
+        $result = $this->service->rewriteHotspotDomains($hotspotData, $project);
+
+        // IP-Adresse wird durch source_domain ersetzt
+        $this->assertEquals('https://antraege.ssv-datteln.de/login', $result['link']);
+        $this->assertEquals('Login', $result['label']);
+    }
 }
