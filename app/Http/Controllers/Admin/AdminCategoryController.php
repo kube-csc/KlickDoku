@@ -28,10 +28,12 @@ class AdminCategoryController extends Controller
             'description' => 'nullable|string',
             'parent_id' => 'nullable|exists:categories,id',
             'sort_order' => 'nullable|integer',
+            'published' => 'nullable|boolean',
         ]);
 
         $validated['slug'] = slugFromTitle($validated['name']);
         $validated['sort_order'] = $validated['sort_order'] ?? Category::max('sort_order') + 1;
+        $validated['published'] = $request->has('published');
 
         Category::create($validated);
 
@@ -52,9 +54,11 @@ class AdminCategoryController extends Controller
             'description' => 'nullable|string',
             'parent_id' => 'nullable|exists:categories,id',
             'sort_order' => 'nullable|integer',
+            'published' => 'nullable|boolean',
         ]);
 
         $validated['slug'] = slugFromTitle($validated['name']);
+        $validated['published'] = $request->has('published');
         $category->update($validated);
 
         return redirect()->route('admin.categories.index')

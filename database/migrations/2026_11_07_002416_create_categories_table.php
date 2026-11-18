@@ -18,6 +18,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->foreignId('parent_id')->nullable()->constrained('categories')->nullOnDelete();
             $table->integer('sort_order')->default(0);
+            $table->boolean('published')->default(false);
             $table->timestamps();
         });
     }

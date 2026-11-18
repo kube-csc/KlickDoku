@@ -40,17 +40,17 @@ class DemoContentSeeder extends Seeder
         // Hole oder erstelle Kategorien
         $categoryGettingStarted = Category::firstOrCreate(
             ['slug' => 'erste-schritte'],
-            ['name' => 'Erste Schritte', 'sort_order' => 1]
+            ['name' => 'Erste Schritte', 'sort_order' => 1, 'published' => true]
         );
 
         $categoryFeatures = Category::firstOrCreate(
             ['slug' => 'funktionen'],
-            ['name' => 'Funktionen', 'sort_order' => 2]
+            ['name' => 'Funktionen', 'sort_order' => 2, 'published' => true]
         );
 
         $categoryAdmin = Category::firstOrCreate(
             ['slug' => 'verwaltung'],
-            ['name' => 'Verwaltung', 'sort_order' => 3]
+            ['name' => 'Verwaltung', 'sort_order' => 3, 'published' => true]
         );
 
         $this->command->info('Erstelle Demo-Guides und -Tutorials...');

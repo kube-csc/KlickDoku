@@ -9,7 +9,11 @@ class Category extends Model
 {
     use Searchable;
 
-    protected $fillable = ['name', 'slug', 'description', 'parent_id', 'sort_order'];
+    protected $fillable = ['name', 'slug', 'description', 'parent_id', 'sort_order', 'published'];
+
+    protected $casts = [
+        'published' => 'boolean',
+    ];
 
     public function toSearchableArray()
     {
@@ -70,5 +74,10 @@ class Category extends Model
         return $query->whereHas('translations', function ($q) use ($locale) {
             $q->where('locale', $locale);
         });
+    }
+
+    public function scopePublished($query)
+    {
+        return $query->where('published', true);
     }
 }

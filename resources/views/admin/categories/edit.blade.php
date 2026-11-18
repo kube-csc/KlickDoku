@@ -79,6 +79,13 @@
                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
             </div>
+
+            <div class="flex items-center">
+                <input type="checkbox" name="published" id="published" value="1" {{ old('published', $category->published) ? 'checked' : '' }}
+                       class="rounded border-gray-300 text-blue-500 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <label for="published" class="ml-2 block text-sm font-medium text-gray-700">Veröffentlicht</label>
+            </div>
+            <p class="text-sm text-gray-500">Aktivieren, um die Kategorie öffentlich sichtbar zu machen.</p>
         </div>
 
         <div class="mt-6 flex justify-end space-x-4">
